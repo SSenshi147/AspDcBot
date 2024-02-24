@@ -1,4 +1,5 @@
 using AspDcBot.Services;
+using Discord.Interactions;
 using Discord.WebSocket;
 
 namespace AspDcBot;
@@ -11,6 +12,7 @@ public class Program
 
         // Add services to the container.
         builder.Services.AddMediatR(config => config.RegisterServicesFromAssemblyContaining<Program>());
+        builder.Services.AddSingleton<InteractionService>();
         builder.Services.AddSingleton<DiscordSocketClient>();
         builder.Services.AddSingleton<DiscordBotService>();
 

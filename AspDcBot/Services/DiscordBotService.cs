@@ -15,6 +15,8 @@ public class DiscordBotService(
     private const string TOKEN = "MTA0Njc0MDkzNzk5ODU5ODE1NA.GO8vxV.P9S_ZcbGd0u4UXwxmCaN1yz2z3c-Mn9RXlYemI";
     private const ulong DEV_SERVER_ID = 1046516338119675955;
 
+    private readonly IEnumerable<Type> commands = Assembly.GetExecutingAssembly().GetTypes().Where(x => x.IsSubclassOf(typeof(Requests)));
+
     public async Task StartAsync()
     {
         if (client.ConnectionState != ConnectionState.Disconnected)
@@ -108,36 +110,37 @@ public class DiscordBotService(
         // TODO: csak akkor regelni a commandot, ha nincs még regelve
         var devGuild = client.Guilds.SingleOrDefault(x => x.Id == DEV_SERVER_ID);
 
-        if (devGuild is null)
-        {
-            return;
-        }
+        if (devGuild is null) return;
 
         await devGuild.DeleteApplicationCommandsAsync();
 
-        var commands = Assembly.GetExecutingAssembly().GetTypes().Where(x => x.IsSubclassOf(typeof(Test)));
+        await RegisterManualCommands(devGuild);
+    }
 
+    private async Task RegisterManualCommands(SocketGuild guild)
+    {
         foreach (var item in commands)
         {
             var attribute = item.GetCustomAttribute<SlashCommandInfoAttribute>();
+            if (attribute is null) return;
 
-            if (attribute is not null)
-            {
-                var command = new SlashCommandBuilder()
-                   .WithName(attribute.Name)
-                   .WithDescription(attribute.Description)
-                   .Build();
+            var command = new SlashCommandBuilder()
+               .WithName(attribute.Name)
+               .WithDescription(attribute.Description)
+               .Build();
 
-                await devGuild.CreateApplicationCommandAsync(command);
-            }
+            await guild.CreateApplicationCommandAsync(command);
         }
     }
 
     private async Task Client_SlashCommandExecuted(SocketSlashCommand arg)
     {
-        await mediator.Publish(new TestNoti
-        {
-            Args = arg
-        });
+        var type = commands.FirstOrDefault(x => x.GetCustomAttribute<SlashCommandInfoAttribute>()?.Name == arg.CommandName);
+        if (type is null) return;
+
+        var instance = Activator.CreateInstance(type, arg);
+        if (instance is null) return;
+
+        await mediator.Send(instance);
     }
 }

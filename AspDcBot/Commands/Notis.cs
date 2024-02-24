@@ -5,36 +5,6 @@ using System.Runtime.CompilerServices;
 
 namespace AspDcBot.Commands;
 
-public class PingCommand : SlashRequest
-{
-    public override string Name => "ping";
-
-    public override string Description => "ping";
-}
-
-public abstract class SlashRequest : IRequest
-{
-    public abstract string Name { get; }
-    public abstract string Description { get; }
-
-    public required SocketSlashCommand Args { get; init; }
-}
-
-public class PingCommandHandler : IRequestHandler<PingCommand>
-{
-    public async Task Handle(PingCommand request, CancellationToken cancellationToken)
-    {
-        await request.Args.RespondAsync(text: "ping received");
-    }
-}
-
-[AttributeUsage(AttributeTargets.Class)]
-public class SlashCommandInfoAttribute : Attribute
-{
-    public required string Name { get; init; }
-    public required string Description { get; init; }
-}
-
 public sealed class TestNoti : INotification
 {
     public required SocketSlashCommand Args { get; init; }
