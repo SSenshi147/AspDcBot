@@ -122,7 +122,7 @@ public class DiscordBotService(
         foreach (var item in commands)
         {
             var attribute = item.GetCustomAttribute<SlashCommandInfoAttribute>();
-            if (attribute is null) return;
+            if (attribute is null) continue;
 
             var command = new SlashCommandBuilder()
                .WithName(attribute.Name)
