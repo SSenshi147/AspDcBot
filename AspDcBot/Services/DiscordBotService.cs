@@ -12,13 +12,16 @@ public class DiscordBotService(
     IMediator mediator)
 {
     // TODO: configba
-    private const string TOKEN = "MTA0Njc0MDkzNzk5ODU5ODE1NA.GO8vxV.P9S_ZcbGd0u4UXwxmCaN1yz2z3c-Mn9RXlYemI";
+    private const string TOKEN_KEY = "DISCORD_BOT_TOKEN";
     private const ulong DEV_SERVER_ID = 1046516338119675955;
 
     private readonly IEnumerable<Type> commands = Assembly.GetExecutingAssembly().GetTypes().Where(x => x.IsSubclassOf(typeof(Requests)));
 
     public async Task StartAsync()
     {
+        var token = Environment.GetEnvironmentVariable(TOKEN_KEY);
+        if (token is null) return;
+        
         if (client.ConnectionState != ConnectionState.Disconnected)
         {
             return;
@@ -27,7 +30,7 @@ public class DiscordBotService(
         client.Connected += Client_Connected;
         client.SlashCommandExecuted += Client_SlashCommandExecuted;
 
-        await client.LoginAsync(TokenType.Bot, TOKEN);
+        await client.LoginAsync(TokenType.Bot, token);
         await client.StartAsync();
     }
 
