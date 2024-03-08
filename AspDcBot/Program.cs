@@ -23,11 +23,6 @@ public class Program
             GatewayIntents = Discord.GatewayIntents.All
         }));
         builder.Services.AddSingleton<DiscordBotService>();
-        builder.Services.AddSingleton<AudioService>();
-
-        builder.Services.AddSingleton<HostedAudioService>();
-        builder.Services.AddHostedService<HostedAudioService>();
-
 
         builder.Services.AddControllers();
         // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
