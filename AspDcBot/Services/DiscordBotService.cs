@@ -13,15 +13,19 @@ public class DiscordBotService(
 {
     // TODO: configba
     private const string TOKEN_KEY = "DISCORD_BOT_TOKEN";
+    private const string DEV_TOKEN_KEY = "DEV_BOT_TOKEN";
     private const ulong DEV_SERVER_ID = 1046516338119675955;
 
     private readonly IEnumerable<Type> commands = Assembly.GetExecutingAssembly().GetTypes().Where(x => x.IsSubclassOf(typeof(Requests)));
 
+    private int _coffeeCount = 0;
+    private int _teaCount = 0;
+
     public async Task StartAsync()
     {
-        var token = Environment.GetEnvironmentVariable(TOKEN_KEY);
+        var token = Environment.GetEnvironmentVariable(DEV_TOKEN_KEY);
         if (token is null) return;
-        
+
         if (client.ConnectionState != ConnectionState.Disconnected)
         {
             return;
@@ -29,9 +33,18 @@ public class DiscordBotService(
 
         client.Connected += Client_Connected;
         client.SlashCommandExecuted += Client_SlashCommandExecuted;
+        client.MessageReceived += this.Client_MessageReceived;
 
         await client.LoginAsync(TokenType.Bot, token);
         await client.StartAsync();
+    }
+
+    private async Task Client_MessageReceived(SocketMessage arg)
+    {
+        await mediator.Publish(new MessageReceivedNotification
+        {
+            SocketMessage = arg,
+        });
     }
 
     public async Task StopAsync()
@@ -48,6 +61,7 @@ public class DiscordBotService(
     {
         client.Connected -= Client_Connected;
         client.SlashCommandExecuted -= Client_SlashCommandExecuted;
+        client.MessageReceived -= this.Client_MessageReceived;
 
         await client.LogoutAsync();
         await client.StopAsync();

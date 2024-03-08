@@ -1,8 +1,8 @@
 ﻿namespace AspDcBot.Commands;
 
 [AttributeUsage(AttributeTargets.Class)]
-public class SlashCommandInfoAttribute : Attribute
+public class SlashCommandInfoAttribute(string name, string description) : Attribute
 {
-    public required string Name { get; init; }
-    public required string Description { get; init; }
+    public string Name { get; } = name;
+    public string Description { get; } = description;
 }

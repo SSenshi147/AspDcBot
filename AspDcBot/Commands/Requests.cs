@@ -1,5 +1,4 @@
-﻿using Discord;
-using Discord.Interactions;
+﻿using Discord.Interactions;
 using Discord.WebSocket;
 using MediatR;
 
@@ -10,7 +9,7 @@ public abstract class Requests(SocketSlashCommand myProperty) : IRequest
     public SocketSlashCommand MyProperty { get; } = myProperty;
 }
 
-[SlashCommandInfo(Description = "desc", Name = "asdasd")]
+[SlashCommandInfo("ping", "ping")]
 public class PingRequest(SocketSlashCommand myProperty) : Requests(myProperty)
 {
 }
