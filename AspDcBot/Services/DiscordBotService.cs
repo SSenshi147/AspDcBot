@@ -9,38 +9,43 @@ namespace AspDcBot.Services;
 
 public class DiscordBotService(
     DiscordSocketClient client,
-    IMediator mediator)
+    IMediator mediator,
+    ILogger<DiscordBotService> logger)
 {
     // TODO: configba
     private const string TOKEN_KEY = "DISCORD_BOT_TOKEN";
-    private const string DEV_TOKEN_KEY = "DEV_BOT_TOKEN";
     private const ulong DEV_SERVER_ID = 1046516338119675955;
 
     private readonly IEnumerable<Type> commands = Assembly.GetExecutingAssembly().GetTypes().Where(x => x.IsSubclassOf(typeof(Requests)));
 
-    private int _coffeeCount = 0;
-    private int _teaCount = 0;
-
     public async Task StartAsync()
     {
-        var token = Environment.GetEnvironmentVariable(DEV_TOKEN_KEY);
-        if (token is null) return;
+        var token = Environment.GetEnvironmentVariable(TOKEN_KEY);
+        if (token is null)
+        {
+            logger.LogWarning($"environment variable {TOKEN_KEY} not found, bot will not launch");
+            return;
+        }
 
         if (client.ConnectionState != ConnectionState.Disconnected)
         {
+            logger.LogWarning($"bot client is not in {nameof(ConnectionState.Disconnected)}, bot will not launch");
             return;
         }
 
         client.Connected += Client_Connected;
         client.SlashCommandExecuted += Client_SlashCommandExecuted;
-        client.MessageReceived += this.Client_MessageReceived;
+        client.MessageReceived += Client_MessageReceived;
 
         await client.LoginAsync(TokenType.Bot, token);
+        logger.LogInformation("bot successfully logged in");
         await client.StartAsync();
+        logger.LogInformation("bot successfully started");
     }
 
     private async Task Client_MessageReceived(SocketMessage arg)
     {
+        logger.LogInformation("bot received a message");
         await mediator.Publish(new MessageReceivedNotification
         {
             SocketMessage = arg,
@@ -51,6 +56,7 @@ public class DiscordBotService(
     {
         if (client.ConnectionState != ConnectionState.Connected)
         {
+            logger.LogWarning($"bot client is not in {nameof(ConnectionState.Connected)}, bot will not stop");
             return;
         }
 
@@ -61,10 +67,12 @@ public class DiscordBotService(
     {
         client.Connected -= Client_Connected;
         client.SlashCommandExecuted -= Client_SlashCommandExecuted;
-        client.MessageReceived -= this.Client_MessageReceived;
+        client.MessageReceived -= Client_MessageReceived;
 
         await client.LogoutAsync();
+        logger.LogInformation("bot successfully logged out");
         await client.StopAsync();
+        logger.LogInformation("bot successfully stopped");
     }
 
     public async Task PingAsync(CancellationToken cancellationToken, string message = "ping")
@@ -152,6 +160,8 @@ public class DiscordBotService(
 
     private async Task Client_SlashCommandExecuted(SocketSlashCommand arg)
     {
+        logger.LogInformation($"bot received slash command: {arg.CommandName}");
+        
         var type = commands.FirstOrDefault(x => x.GetCustomAttribute<SlashCommandInfoAttribute>()?.Name == arg.CommandName);
         if (type is null) return;
 

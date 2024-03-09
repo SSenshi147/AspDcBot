@@ -10,7 +10,7 @@ public class Program
 {
     public static void Main(string[] args)
     {
-        const string sqliteConnectionString = "Data Source=C:\\Users\\MARCI\\Desktop\\coffee.sqlite";
+        const string sqliteConnectionString = "Data Source=/home/app/coffee.sqlite";
 
         var builder = WebApplication.CreateBuilder(args);
 
@@ -38,10 +38,7 @@ public class Program
             app.UseSwaggerUI();
         }
 
-        app.UseHttpsRedirection();
-
         app.UseAuthorization();
-
 
         app.MapControllers();
 
