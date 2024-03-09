@@ -10,7 +10,8 @@ public class MessageReceivedNotification : INotification
     public required SocketMessage SocketMessage { get; init; }
 }
 
-public class MessageReceivedNotificationHandler(IServiceProvider serviceProvider) : INotificationHandler<MessageReceivedNotification>
+public class MessageReceivedNotificationHandler(
+    BotDbContext botDbContext) : INotificationHandler<MessageReceivedNotification>
 {
     private const string tatakaeve = ":tatakaeve:";
     private const string coffee = "☕";
@@ -44,9 +45,6 @@ public class MessageReceivedNotificationHandler(IServiceProvider serviceProvider
             model.Caffeine = CaffeineType.Tea;
         }
         
-        using var scope = serviceProvider.CreateScope();
-        using var botDbContext = scope.ServiceProvider.GetRequiredService<BotDbContext>();
-
         await botDbContext.AddAsync(model, cancellationToken);
         await botDbContext.SaveChangesAsync(cancellationToken);
         
@@ -67,7 +65,7 @@ public sealed class OkEmote : IEmote
     {
         get
         {
-            _instance ??= new();
+            _instance ??= new OkEmote();
             return _instance;
         }
     }

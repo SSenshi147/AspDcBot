@@ -10,20 +10,21 @@ namespace AspDcBot.Services;
 public class DiscordBotService(
     DiscordSocketClient client,
     IMediator mediator,
-    ILogger<DiscordBotService> logger)
+    ILogger<DiscordBotService> logger,
+    IConfiguration configuration)
 {
     // TODO: configba
-    private const string TOKEN_KEY = "DISCORD_BOT_TOKEN";
-    private const ulong DEV_SERVER_ID = 1046516338119675955;
+    private const string TokenKey = "BotToken";
+    private const ulong DevServerId = 1046516338119675955;
 
-    private readonly IEnumerable<Type> commands = Assembly.GetExecutingAssembly().GetTypes().Where(x => x.IsSubclassOf(typeof(Requests)));
+    private readonly IEnumerable<Type> _commands = Assembly.GetExecutingAssembly().GetTypes().Where(x => x.IsSubclassOf(typeof(Requests)));
 
     public async Task StartAsync()
     {
-        var token = Environment.GetEnvironmentVariable(TOKEN_KEY);
+        var token = configuration[TokenKey];
         if (token is null)
         {
-            logger.LogWarning($"environment variable {TOKEN_KEY} not found, bot will not launch");
+            logger.LogWarning($"environment variable {TokenKey} not found, bot will not launch");
             return;
         }
 
@@ -133,7 +134,7 @@ public class DiscordBotService(
     {
         // TODO: configból allowed servereket kiszedni
         // TODO: csak akkor regelni a commandot, ha nincs még regelve
-        var devGuild = client.Guilds.SingleOrDefault(x => x.Id == DEV_SERVER_ID);
+        var devGuild = client.Guilds.SingleOrDefault(x => x.Id == DevServerId);
 
         if (devGuild is null) return;
 
@@ -144,7 +145,7 @@ public class DiscordBotService(
 
     private async Task RegisterManualCommands(SocketGuild guild)
     {
-        foreach (var item in commands)
+        foreach (var item in _commands)
         {
             var attribute = item.GetCustomAttribute<SlashCommandInfoAttribute>();
             if (attribute is null) continue;
@@ -161,8 +162,8 @@ public class DiscordBotService(
     private async Task Client_SlashCommandExecuted(SocketSlashCommand arg)
     {
         logger.LogInformation($"bot received slash command: {arg.CommandName}");
-        
-        var type = commands.FirstOrDefault(x => x.GetCustomAttribute<SlashCommandInfoAttribute>()?.Name == arg.CommandName);
+
+        var type = _commands.FirstOrDefault(x => x.GetCustomAttribute<SlashCommandInfoAttribute>()?.Name == arg.CommandName);
         if (type is null) return;
 
         var instance = Activator.CreateInstance(type, arg);
