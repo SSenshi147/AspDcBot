@@ -10,7 +10,11 @@ public class Program
 {
     public static void Main(string[] args)
     {
+        #if RELEASE
         const string sqliteConnectionString = "Data Source=/home/app/coffee.sqlite";
+        #else
+        const string sqliteConnectionString = "Data Source=C:\\Users\\MARCI\\Desktop\\coffee.sqlite";
+        #endif
 
         var builder = WebApplication.CreateBuilder(args);
 

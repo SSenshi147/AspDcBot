@@ -11,7 +11,15 @@ public class BotDbContext(DbContextOptions options) : DbContext(options)
 public class DrinkModel
 {
     [Key]
+    public Guid Id { get; set; } = Guid.NewGuid();
     public ulong UserId { get; set; }
-    public int CoffeCount { get; set; }
-    public int TeaCount { get; set; }
+    public ulong MessageId { get; set; }
+    public ulong TextChannelId { get; set; }
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public CaffeineType Caffeine { get; set; }
+}
+
+public enum CaffeineType
+{
+    Coffee, Tea
 }

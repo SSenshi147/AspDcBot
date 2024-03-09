@@ -1,4 +1,5 @@
 ﻿using AspDcBot.Data;
+using Discord;
 using Discord.WebSocket;
 using MediatR;
 
@@ -27,28 +28,47 @@ public class MessageReceivedNotificationHandler(IServiceProvider serviceProvider
 
         if (!drinks.Contains(arg.CleanContent)) return;
 
-        using var scope = serviceProvider.CreateScope();
-        using var botDbContext = scope.ServiceProvider.GetRequiredService<BotDbContext>();
-
-        var user = botDbContext.DrinkModels.SingleOrDefault(x => x.UserId == arg.Author.Id);
-
-        if (user is null || user == default)
+        var model = new DrinkModel
         {
-            var model = await botDbContext.DrinkModels.AddAsync(new DrinkModel { UserId = arg.Author.Id }, cancellationToken);
-            user = model.Entity;
-        }
+            MessageId = arg.Id,
+            TextChannelId = arg.Channel.Id,
+            UserId = arg.Author.Id,
+        };
 
         if (coffees.Contains(arg.CleanContent))
         {
-            user.CoffeCount++;
-            await arg.Channel.SendMessageAsync($"{arg.Author.Username} eddig {user.CoffeCount} kávét fogyasztott el!");
+            model.Caffeine = CaffeineType.Coffee;
         }
         else if (teas.Contains(arg.CleanContent))
         {
-            user.TeaCount++;
-            await arg.Channel.SendMessageAsync($"{arg.Author.Username} eddig {user.TeaCount} teát fogyasztott el!");
+            model.Caffeine = CaffeineType.Tea;
         }
+        
+        using var scope = serviceProvider.CreateScope();
+        using var botDbContext = scope.ServiceProvider.GetRequiredService<BotDbContext>();
 
+        await botDbContext.AddAsync(model, cancellationToken);
         await botDbContext.SaveChangesAsync(cancellationToken);
+        
+        await arg.AddReactionAsync(OkEmote.Instance);
+    }
+}
+
+public sealed class OkEmote : IEmote
+{
+    public string Name => "✅";
+
+    private OkEmote()
+    {
+    }
+
+    private static OkEmote? _instance;
+    public static OkEmote Instance
+    {
+        get
+        {
+            _instance ??= new();
+            return _instance;
+        }
     }
 }
