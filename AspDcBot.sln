@@ -3,35 +3,34 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.9.34607.119
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AspDcBot", "AspDcBot\AspDcBot.csproj", "{63364112-CEBF-47BC-8AC7-4298F0E418BD}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DonDumbledore.Logic", "DonDumbledore.Logic\DonDumbledore.Logic.csproj", "{61EBC50A-11A9-4E83-925E-4B35A74E0ECF}"
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{59F50B62-04EA-4F13-8A6D-882389B8CC2A}"
-	ProjectSection(SolutionItems) = preProject
-		.editorconfig = .editorconfig
-	EndProjectSection
-EndProject
-Project("{E53339B2-1760-4266-BCC7-CA923CBCF16C}") = "docker-compose", "docker-compose.dcproj", "{9ED55993-4AE6-4CFB-862D-E2B8DBE80968}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ConsoleHost", "ConsoleHost\ConsoleHost.csproj", "{A7F98626-8435-4677-8667-BC22F0F79F63}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DonDumbledore.ConsoleHost", "DonDumbledore.ConsoleHost\DonDumbledore.ConsoleHost.csproj", "{8F361553-A805-4009-93B6-196B465AB6AD}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
+		Debug|x64 = Debug|x64
 		Release|Any CPU = Release|Any CPU
+		Release|x64 = Release|x64
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{63364112-CEBF-47BC-8AC7-4298F0E418BD}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{63364112-CEBF-47BC-8AC7-4298F0E418BD}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{63364112-CEBF-47BC-8AC7-4298F0E418BD}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{63364112-CEBF-47BC-8AC7-4298F0E418BD}.Release|Any CPU.Build.0 = Release|Any CPU
-		{9ED55993-4AE6-4CFB-862D-E2B8DBE80968}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{9ED55993-4AE6-4CFB-862D-E2B8DBE80968}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{9ED55993-4AE6-4CFB-862D-E2B8DBE80968}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{9ED55993-4AE6-4CFB-862D-E2B8DBE80968}.Release|Any CPU.Build.0 = Release|Any CPU
-		{A7F98626-8435-4677-8667-BC22F0F79F63}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{A7F98626-8435-4677-8667-BC22F0F79F63}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{A7F98626-8435-4677-8667-BC22F0F79F63}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{A7F98626-8435-4677-8667-BC22F0F79F63}.Release|Any CPU.Build.0 = Release|Any CPU
+		{61EBC50A-11A9-4E83-925E-4B35A74E0ECF}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{61EBC50A-11A9-4E83-925E-4B35A74E0ECF}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{61EBC50A-11A9-4E83-925E-4B35A74E0ECF}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{61EBC50A-11A9-4E83-925E-4B35A74E0ECF}.Debug|x64.Build.0 = Debug|Any CPU
+		{61EBC50A-11A9-4E83-925E-4B35A74E0ECF}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{61EBC50A-11A9-4E83-925E-4B35A74E0ECF}.Release|Any CPU.Build.0 = Release|Any CPU
+		{61EBC50A-11A9-4E83-925E-4B35A74E0ECF}.Release|x64.ActiveCfg = Release|Any CPU
+		{61EBC50A-11A9-4E83-925E-4B35A74E0ECF}.Release|x64.Build.0 = Release|Any CPU
+		{8F361553-A805-4009-93B6-196B465AB6AD}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8F361553-A805-4009-93B6-196B465AB6AD}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{8F361553-A805-4009-93B6-196B465AB6AD}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{8F361553-A805-4009-93B6-196B465AB6AD}.Debug|x64.Build.0 = Debug|Any CPU
+		{8F361553-A805-4009-93B6-196B465AB6AD}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{8F361553-A805-4009-93B6-196B465AB6AD}.Release|Any CPU.Build.0 = Release|Any CPU
+		{8F361553-A805-4009-93B6-196B465AB6AD}.Release|x64.ActiveCfg = Release|Any CPU
+		{8F361553-A805-4009-93B6-196B465AB6AD}.Release|x64.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

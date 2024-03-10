@@ -1,6 +1,0 @@
-@AspDcBot_HostAddress = http://localhost:5231
-
-GET {{AspDcBot_HostAddress}}/weatherforecast/
-Accept: application/json
-
-###

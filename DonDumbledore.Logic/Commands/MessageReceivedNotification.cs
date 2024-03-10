@@ -1,10 +1,10 @@
-﻿using AspDcBot.Data;
-using Discord;
+﻿using Discord;
 using Discord.WebSocket;
+using DonDumbledore.Logic.Data;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
-namespace AspDcBot.Commands;
+namespace DonDumbledore.Logic.Commands;
 
 public class MessageReceivedNotification : INotification
 {
@@ -19,8 +19,8 @@ public class MessageReceivedNotificationHandler(
     private const string tea = "🍵";
 
     private readonly string[] coffees = [tatakaeve, coffee];
-    private readonly string[] teas = [tea];
     private readonly string[] drinks = [tatakaeve, coffee, tea];
+    private readonly string[] teas = [tea];
 
     public async Task Handle(MessageReceivedNotification notification, CancellationToken cancellationToken)
     {
@@ -36,7 +36,7 @@ public class MessageReceivedNotificationHandler(
             {
                 UserId = arg.Author.Id,
                 Mention = arg.Author.Mention,
-                UserName = arg.Author.Username,
+                UserName = arg.Author.Username
             };
 
             await botDbContext.UserDataModels.AddAsync(userModel, cancellationToken);
@@ -46,17 +46,12 @@ public class MessageReceivedNotificationHandler(
         {
             MessageId = arg.Id,
             TextChannelId = arg.Channel.Id,
-            UserId = arg.Author.Id,
+            UserId = arg.Author.Id
         };
 
         if (coffees.Contains(arg.CleanContent))
-        {
             model.Caffeine = CaffeineType.Coffee;
-        }
-        else if (teas.Contains(arg.CleanContent))
-        {
-            model.Caffeine = CaffeineType.Tea;
-        }
+        else if (teas.Contains(arg.CleanContent)) model.Caffeine = CaffeineType.Tea;
 
         await botDbContext.AddAsync(model, cancellationToken);
         await botDbContext.SaveChangesAsync(cancellationToken);
@@ -67,13 +62,12 @@ public class MessageReceivedNotificationHandler(
 
 public sealed class OkEmote : IEmote
 {
-    public string Name => "✅";
+    private static OkEmote? _instance;
 
     private OkEmote()
     {
     }
 
-    private static OkEmote? _instance;
     public static OkEmote Instance
     {
         get
@@ -82,4 +76,6 @@ public sealed class OkEmote : IEmote
             return _instance;
         }
     }
+
+    public string Name => "✅";
 }

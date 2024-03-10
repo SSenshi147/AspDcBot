@@ -1,4 +1,4 @@
-﻿namespace AspDcBot.Models;
+﻿namespace DonDumbledore.Logic.Models;
 
 public class Guild
 {

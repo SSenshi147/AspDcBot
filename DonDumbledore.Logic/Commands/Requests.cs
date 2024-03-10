@@ -1,11 +1,10 @@
 ﻿using System.Text;
-using AspDcBot.Data;
-using Discord.Interactions;
 using Discord.WebSocket;
+using DonDumbledore.Logic.Data;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
-namespace AspDcBot.Commands;
+namespace DonDumbledore.Logic.Commands;
 
 public abstract class Requests(SocketSlashCommand myProperty) : IRequest
 {
@@ -21,7 +20,7 @@ public class PingRequestHandler : IRequestHandler<PingRequest>
 {
     public async Task Handle(PingRequest request, CancellationToken cancellationToken)
     {
-        await request.MyProperty.RespondAsync(text: "pong");
+        await request.MyProperty.RespondAsync("pong");
     }
 }
 
@@ -52,9 +51,7 @@ public class CaffeineStatsRequestHandler(BotDbContext botDbContext) : IRequestHa
         var sb = new StringBuilder();
         sb.AppendLine("Legutóbbi 3 drogozása a kisfiúnak:");
         foreach (var latest in latests)
-        {
             sb.AppendLine($"{latest.CreatedAt.ToString("yyyy-MM-dd @ HH:mm")} - {latest.Caffeine.ToString()}");
-        }
 
         sb.AppendLine($"Összesen {count} alkalommal drogoztál, de a Don még nem adott golyót");
 
@@ -82,14 +79,14 @@ public class ToplistRequestHandler(BotDbContext botDbContext) : IRequestHandler<
             })
             .Join(botDbContext.UserDataModels, arg => arg.User, data => data.UserId, (arg1, data) => new
             {
-                Mention = data.Mention,
+                data.Mention,
                 arg1.Count
             })
             .OrderByDescending(x => x.Count)
             .ToListAsync(cancellationToken);
 
         var sb = new StringBuilder(result.Count);
-        for (int i = 0; i < result.Count; i++)
+        for (var i = 0; i < result.Count; i++)
         {
             var item = result[i];
             sb.AppendLine($"{i + 1}. {item.Mention} - {item.Count} drogozási alkalom");

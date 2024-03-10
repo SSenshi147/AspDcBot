@@ -1,11 +1,12 @@
-﻿using AspDcBot.Commands;
-using AspDcBot.Models;
+﻿using System.Reflection;
 using Discord;
 using Discord.WebSocket;
+using DonDumbledore.Logic.Commands;
 using MediatR;
-using System.Reflection;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
 
-namespace AspDcBot.Services;
+namespace DonDumbledore.Logic.Services;
 
 public class DiscordBotService(
     DiscordSocketClient client,
@@ -13,11 +14,10 @@ public class DiscordBotService(
     ILogger<DiscordBotService> logger,
     IConfiguration configuration)
 {
-    // TODO: configba
     private const string TokenKey = "BotToken";
-    private const ulong DevServerId = 1046516338119675955;
 
-    private readonly IEnumerable<Type> _commands = Assembly.GetExecutingAssembly().GetTypes().Where(x => x.IsSubclassOf(typeof(Requests)));
+    private readonly IEnumerable<Type> _commands =
+        Assembly.GetExecutingAssembly().GetTypes().Where(x => x.IsSubclassOf(typeof(Requests)));
 
     public async Task StartAsync()
     {
@@ -49,7 +49,7 @@ public class DiscordBotService(
         logger.LogInformation("bot received a message");
         await mediator.Publish(new MessageReceivedNotification
         {
-            SocketMessage = arg,
+            SocketMessage = arg
         });
     }
 
@@ -76,67 +76,11 @@ public class DiscordBotService(
         logger.LogInformation("bot successfully stopped");
     }
 
-    public async Task PingAsync(CancellationToken cancellationToken, string message = "ping")
-    {
-        await Parallel.ForEachAsync(client.Guilds, cancellationToken, async (guild, token) =>
-        {
-            await Parallel.ForEachAsync(guild.Channels, cancellationToken, async (channel, token) =>
-            {
-                if (channel is not null && channel is ITextChannel textChannel)
-                {
-                    await textChannel.SendMessageAsync(text: message);
-                }
-            });
-        });
-    }
-
-    public List<Guild> GetGuildsAndChannels()
-    {
-        var response = new List<Guild>();
-
-        foreach (var guild in client.Guilds)
-        {
-            var guildToAdd = new Guild
-            {
-                Id = guild.Id.ToString(),
-                Name = guild.Name,
-            };
-
-            foreach (var channel in guild.Channels)
-            {
-                var channelToAdd = new Channel
-                {
-                    Id = channel.Id.ToString(),
-                    Name = channel.Name,
-                    Type = channel.GetType().Name.ToString(),
-                };
-
-                guildToAdd.Channels.Add(channelToAdd);
-            }
-
-            response.Add(guildToAdd);
-        }
-
-        return response;
-    }
-
-    public async Task ClearGlobalCommands()
-    {
-        var commands = await client.GetGlobalApplicationCommandsAsync();
-
-        foreach (var command in commands)
-        {
-            await command.DeleteAsync();
-        }
-    }
-
     private async Task Client_Connected()
     {
         // TODO: configból allowed servereket kiszedni
         // TODO: csak akkor regelni a commandot, ha nincs még regelve
-        //var devGuild = client.Guilds.SingleOrDefault(x => x.Id == DevServerId);
-
-        //if (devGuild is null) return;
+        await ClearGlobalCommands();
 
         var guilds = client.Guilds;
 
@@ -145,10 +89,12 @@ public class DiscordBotService(
             await guild.DeleteApplicationCommandsAsync();
             await RegisterManualCommands(guild);
         });
+    }
+    private async Task ClearGlobalCommands()
+    {
+        var commands = await client.GetGlobalApplicationCommandsAsync();
 
-        //await devGuild.DeleteApplicationCommandsAsync();
-
-        //await RegisterManualCommands(devGuild);
+        foreach (var command in commands) await command.DeleteAsync();
     }
 
     private async Task RegisterManualCommands(SocketGuild guild)
@@ -159,9 +105,9 @@ public class DiscordBotService(
             if (attribute is null) continue;
 
             var command = new SlashCommandBuilder()
-               .WithName(attribute.Name)
-               .WithDescription(attribute.Description)
-               .Build();
+                .WithName(attribute.Name)
+                .WithDescription(attribute.Description)
+                .Build();
 
             await guild.CreateApplicationCommandAsync(command);
         }
@@ -171,7 +117,8 @@ public class DiscordBotService(
     {
         logger.LogInformation($"bot received slash command: {arg.CommandName}");
 
-        var type = _commands.FirstOrDefault(x => x.GetCustomAttribute<SlashCommandInfoAttribute>()?.Name == arg.CommandName);
+        var type = _commands.FirstOrDefault(x =>
+            x.GetCustomAttribute<SlashCommandInfoAttribute>()?.Name == arg.CommandName);
         if (type is null) return;
 
         var instance = Activator.CreateInstance(type, arg);

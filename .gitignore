@@ -363,3 +363,5 @@ MigrationBackup/
 FodyWeavers.xsd
 /docker-compose.override.yml
 /AspDcBot/appsettings.Development.json
+/ConsoleHost/appsettings.Development.json
+/DonDumbledore.ConsoleHost/appsettings.Development.json
