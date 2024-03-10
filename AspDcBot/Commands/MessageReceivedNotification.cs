@@ -2,6 +2,7 @@
 using Discord;
 using Discord.WebSocket;
 using MediatR;
+using Microsoft.EntityFrameworkCore;
 
 namespace AspDcBot.Commands;
 
@@ -29,6 +30,18 @@ public class MessageReceivedNotificationHandler(
 
         if (!drinks.Contains(arg.CleanContent)) return;
 
+        if (!await botDbContext.UserDataModels.AnyAsync(x => x.UserId == arg.Author.Id, cancellationToken))
+        {
+            var userModel = new UserData
+            {
+                UserId = arg.Author.Id,
+                Mention = arg.Author.Mention,
+                UserName = arg.Author.Username,
+            };
+
+            await botDbContext.UserDataModels.AddAsync(userModel, cancellationToken);
+        }
+
         var model = new DrinkModel
         {
             MessageId = arg.Id,
@@ -44,10 +57,10 @@ public class MessageReceivedNotificationHandler(
         {
             model.Caffeine = CaffeineType.Tea;
         }
-        
+
         await botDbContext.AddAsync(model, cancellationToken);
         await botDbContext.SaveChangesAsync(cancellationToken);
-        
+
         await arg.AddReactionAsync(OkEmote.Instance);
     }
 }

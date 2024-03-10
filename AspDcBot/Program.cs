@@ -10,16 +10,14 @@ public class Program
 {
     public static void Main(string[] args)
     {
-        #if RELEASE
-        const string sqliteConnectionString = "Data Source=/home/app/coffee.sqlite";
-        #else
-        const string sqliteConnectionString = "Data Source=C:\\Users\\MARCI\\Desktop\\coffee.sqlite";
-        #endif
+        const string dbConnectionStringKey = "SqliteConnectionString";
 
         var builder = WebApplication.CreateBuilder(args);
 
+        var connectionString = builder.Configuration[dbConnectionStringKey];
+
         // Add services to the container.
-        builder.Services.AddDbContext<BotDbContext>(opt => opt.UseSqlite(sqliteConnectionString));
+        builder.Services.AddDbContext<BotDbContext>(opt => opt.UseSqlite(connectionString));
         builder.Services.AddMediatR(config => config.RegisterServicesFromAssemblyContaining<Program>());
         builder.Services.AddSingleton<InteractionService>();
         builder.Services.AddSingleton<DiscordSocketClient>(sp => new DiscordSocketClient(new DiscordSocketConfig

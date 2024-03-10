@@ -134,13 +134,21 @@ public class DiscordBotService(
     {
         // TODO: configból allowed servereket kiszedni
         // TODO: csak akkor regelni a commandot, ha nincs még regelve
-        var devGuild = client.Guilds.SingleOrDefault(x => x.Id == DevServerId);
+        //var devGuild = client.Guilds.SingleOrDefault(x => x.Id == DevServerId);
 
-        if (devGuild is null) return;
+        //if (devGuild is null) return;
 
-        await devGuild.DeleteApplicationCommandsAsync();
+        var guilds = client.Guilds;
 
-        await RegisterManualCommands(devGuild);
+        await Parallel.ForEachAsync(guilds, async (guild, _) =>
+        {
+            await guild.DeleteApplicationCommandsAsync();
+            await RegisterManualCommands(guild);
+        });
+
+        //await devGuild.DeleteApplicationCommandsAsync();
+
+        //await RegisterManualCommands(devGuild);
     }
 
     private async Task RegisterManualCommands(SocketGuild guild)

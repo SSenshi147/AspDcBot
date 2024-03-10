@@ -80,6 +80,11 @@ public class ToplistRequestHandler(BotDbContext botDbContext) : IRequestHandler<
                 User = userId,
                 Count = models.Count()
             })
+            .Join(botDbContext.UserDataModels, arg => arg.User, data => data.UserId, (arg1, data) => new
+            {
+                Mention = data.Mention,
+                arg1.Count
+            })
             .OrderByDescending(x => x.Count)
             .ToListAsync(cancellationToken);
 
@@ -87,7 +92,7 @@ public class ToplistRequestHandler(BotDbContext botDbContext) : IRequestHandler<
         for (int i = 0; i < result.Count; i++)
         {
             var item = result[i];
-            sb.AppendLine($"{i + 1}. {item.User} - {item.Count} drogozási alkalom");
+            sb.AppendLine($"{i + 1}. {item.Mention} - {item.Count} drogozási alkalom");
         }
 
         await args.RespondAsync(sb.ToString());

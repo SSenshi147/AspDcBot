@@ -6,6 +6,7 @@ namespace AspDcBot.Data;
 public class BotDbContext(DbContextOptions options) : DbContext(options)
 {
     public DbSet<DrinkModel> DrinkModels { get; set; }
+    public DbSet<UserData> UserDataModels { get; set; }
 }
 
 public class DrinkModel
@@ -22,4 +23,12 @@ public class DrinkModel
 public enum CaffeineType
 {
     Coffee, Tea
+}
+
+public class UserData
+{
+    [Key]
+    public ulong UserId { get; set; }
+    public string UserName { get; set; }
+    public string Mention { get; set; }
 }
