@@ -31,30 +31,11 @@ internal class Program
         {
             GatewayIntents = GatewayIntents.All
         }));
-        builder.Services.AddSingleton<DiscordBotService>();
-        builder.Services.AddHostedService<Test>();
+        builder.Services.AddHostedService<DiscordBotService>();
 
         builder.Build().Run();
-    }
-}
 
-public class Test(DiscordBotService discordBotService) : IHostedService
-{
-    public async Task StartAsync(CancellationToken cancellationToken)
-    {
-        await Console.Out.WriteLineAsync("starting");
-
-        await discordBotService.StartAsync();
-
-        await Console.Out.WriteLineAsync("started");
-    }
-
-    public async Task StopAsync(CancellationToken cancellationToken)
-    {
-        await Console.Out.WriteLineAsync("stopping");
-
-        await discordBotService.StopAsync();
-
-        await Console.Out.WriteLineAsync("stopped");
+        Console.WriteLine("Press ENTER to exit");
+        Console.ReadLine();
     }
 }

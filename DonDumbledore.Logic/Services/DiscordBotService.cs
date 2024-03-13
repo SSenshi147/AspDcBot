@@ -4,6 +4,7 @@ using Discord.WebSocket;
 using DonDumbledore.Logic.Commands;
 using MediatR;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
 namespace DonDumbledore.Logic.Services;
@@ -12,15 +13,16 @@ public class DiscordBotService(
     DiscordSocketClient client,
     IMediator mediator,
     ILogger<DiscordBotService> logger,
-    IConfiguration configuration)
+    IConfiguration configuration) : IHostedService
 {
     private const string TokenKey = "BotToken";
 
     private readonly IEnumerable<Type> _commands =
         Assembly.GetExecutingAssembly().GetTypes().Where(x => x.IsSubclassOf(typeof(Requests)));
 
-    public async Task StartAsync()
+    public async Task StartAsync(CancellationToken cancellationToken)
     {
+        logger.LogInformation("starting bot");
         var token = configuration[TokenKey];
         if (token is null)
         {
@@ -53,7 +55,7 @@ public class DiscordBotService(
         });
     }
 
-    public async Task StopAsync()
+    public async Task StopAsync(CancellationToken cancellationToken)
     {
         if (client.ConnectionState != ConnectionState.Connected)
         {
