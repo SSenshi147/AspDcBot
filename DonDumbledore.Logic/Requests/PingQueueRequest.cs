@@ -9,12 +9,12 @@ using Microsoft.Extensions.Logging;
 
 namespace DonDumbledore.Logic.Requests;
 
-[SlashCommandInfo("ping-queue", "ping-queue")]
+[SlashCommandInfo("ping-queue", "ping-queue", Option = "message")]
 public class PingQueueRequest(SocketSlashCommand myProperty) : RequestBase(myProperty)
 {
 }
 
-[SlashCommandInfo("ping-queue-remove", "ping-queue-remove")]
+[SlashCommandInfo("ping-queue-remove", "ping-queue-remove", Option = "message")]
 public class PingQueueRemoveRequest(SocketSlashCommand myProperty) : RequestBase(myProperty)
 {
 }
@@ -24,12 +24,14 @@ public class PingQueueRequestHandler(
     BotDbContext botDbContext,
     DiscordSocketClient discordSocketClient) : IRequestHandler<PingQueueRequest>
 {
-    private const string jobId = "test-pinger";
     private const string atEveryMinute = "*/1 * * * *";
 
     public async Task Handle(PingQueueRequest request, CancellationToken cancellationToken)
     {
         var arg = request.Arg;
+        var asd = request.Arg.Data.Options.SingleOrDefault(x => x.Name == "message") ?? throw new Exception();
+        var jobId = (string)asd?.Value ?? throw new Exception();
+
 
         try
         {
@@ -47,7 +49,7 @@ public class PingQueueRequestHandler(
             }, cancellationToken);
             await botDbContext.SaveChangesAsync(cancellationToken);
 
-            RecurringJob.AddOrUpdate(jobId, () => PingTask(), atEveryMinute);
+            RecurringJob.AddOrUpdate(jobId, () => PingTask(jobId), atEveryMinute);
             //RecurringJob.AddOrUpdate(jobId, () => BackgroundJobHolder.PingTask(arg), atEveryMinute);
             await arg.RespondAsync(text: "job added");
         }
@@ -57,14 +59,14 @@ public class PingQueueRequestHandler(
         }
     }
 
-    public async Task PingTask()
+    public async Task PingTask(string jobName)
     {
         try
         {
-            var job = await botDbContext.JobDataModels.FirstOrDefaultAsync(x => x.JobId == jobId);
+            var job = await botDbContext.JobDataModels.FirstOrDefaultAsync(x => x.JobId == jobName);
             var user = await discordSocketClient.GetUserAsync(job.UserId);
 
-            await user.SendMessageAsync(text: "ping task");
+            await user.SendMessageAsync(text: $"ping {jobName}");
         }
         catch (Exception ex)
         {
@@ -75,14 +77,13 @@ public class PingQueueRequestHandler(
 
 public class PingQueueRemoveRequestHandler(
     ILogger<PingQueueRemoveRequestHandler> logger,
-    BotDbContext botDbContext,
-    DiscordSocketClient discordSocketClient) : IRequestHandler<PingQueueRemoveRequest>
+    BotDbContext botDbContext) : IRequestHandler<PingQueueRemoveRequest>
 {
-    private const string jobId = "test-pinger";
-
     public async Task Handle(PingQueueRemoveRequest request, CancellationToken cancellationToken)
     {
         var arg = request.Arg;
+        var asd = request.Arg.Data.Options.SingleOrDefault(x => x.Name == "message") ?? throw new Exception();
+        var jobId = (string)asd?.Value ?? throw new Exception();
 
         try
         {
@@ -105,14 +106,5 @@ public class PingQueueRemoveRequestHandler(
         {
             logger.LogError(ex, "error while removing recurring job test-pinger");
         }
-    }
-}
-
-public static class BackgroundJobHolder
-{
-    public static async Task PingTask(DiscordSocketClient discordSocketClient)
-    {
-        var user = await discordSocketClient.GetUserAsync(123);
-        //user.sen
     }
 }
