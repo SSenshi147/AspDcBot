@@ -1,4 +1,4 @@
-﻿namespace DonDumbledore.Logic.Commands;
+﻿namespace DonDumbledore.Logic.Attributes;
 
 [AttributeUsage(AttributeTargets.Class)]
 public class SlashCommandInfoAttribute(string name, string description) : Attribute

@@ -1,8 +1,9 @@
 ﻿using System.Reflection;
 using Discord;
 using Discord.WebSocket;
-using DonDumbledore.Logic.Commands;
-using Hangfire;
+using DonDumbledore.Logic.Attributes;
+using DonDumbledore.Logic.Notifications;
+using DonDumbledore.Logic.Requests;
 using MediatR;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
@@ -18,8 +19,7 @@ public class DiscordBotService(
 {
     private const string TokenKey = "BotToken";
 
-    private readonly IEnumerable<Type> _commands =
-        Assembly.GetExecutingAssembly().GetTypes().Where(x => x.IsSubclassOf(typeof(Requests)));
+    private readonly IEnumerable<Type> _commands = Assembly.GetExecutingAssembly().GetTypes().Where(x => x.IsSubclassOf(typeof(RequestBase)));
 
     public async Task StartAsync(CancellationToken cancellationToken)
     {
@@ -120,7 +120,7 @@ public class DiscordBotService(
                         .Build();
 
                 await guild.CreateApplicationCommandAsync(command);
-                
+
                 logger.LogInformation("registered guild command for guildId: {guildId}, command: {command}", guild.Id, command.Name);
             }
             catch (Exception ex)
@@ -134,8 +134,7 @@ public class DiscordBotService(
     {
         logger.LogInformation("bot received slash command: {commandName}", arg.CommandName);
 
-        var type = _commands.FirstOrDefault(x =>
-            x.GetCustomAttribute<SlashCommandInfoAttribute>()?.Name == arg.CommandName);
+        var type = _commands.FirstOrDefault(x => x.GetCustomAttribute<SlashCommandInfoAttribute>()?.Name == arg.CommandName);
         if (type is null) return;
 
         var instance = Activator.CreateInstance(type, arg);

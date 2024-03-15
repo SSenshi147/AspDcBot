@@ -1,15 +1,9 @@
 ﻿using Discord;
-using Discord.WebSocket;
 using DonDumbledore.Logic.Data;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
-namespace DonDumbledore.Logic.Commands;
-
-public class MessageReceivedNotification : INotification
-{
-    public required SocketMessage SocketMessage { get; init; }
-}
+namespace DonDumbledore.Logic.Notifications;
 
 public class MessageReceivedNotificationHandler(
     BotDbContext botDbContext) : INotificationHandler<MessageReceivedNotification>
@@ -50,8 +44,13 @@ public class MessageReceivedNotificationHandler(
         };
 
         if (coffees.Contains(arg.CleanContent))
+        {
             model.Caffeine = CaffeineType.Coffee;
-        else if (teas.Contains(arg.CleanContent)) model.Caffeine = CaffeineType.Tea;
+        }
+        else if (teas.Contains(arg.CleanContent))
+        {
+            model.Caffeine = CaffeineType.Tea;
+        }
 
         await botDbContext.AddAsync(model, cancellationToken);
         await botDbContext.SaveChangesAsync(cancellationToken);

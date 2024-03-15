@@ -1,8 +1,8 @@
 ﻿using Discord;
 using Discord.Interactions;
 using Discord.WebSocket;
-using DonDumbledore.Logic.Commands;
 using DonDumbledore.Logic.Data;
+using DonDumbledore.Logic.Requests;
 using DonDumbledore.Logic.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -25,7 +25,7 @@ internal class Program
 
         builder.Services.AddSingleton<DiscordSocketClient>();
         builder.Services.AddDbContext<BotDbContext>(opt => opt.UseSqlite(connectionString), ServiceLifetime.Singleton);
-        builder.Services.AddMediatR(config => config.RegisterServicesFromAssemblyContaining<Requests>());
+        builder.Services.AddMediatR(config => config.RegisterServicesFromAssemblyContaining<RequestBase>());
         builder.Services.AddSingleton<InteractionService>();
         builder.Services.AddSingleton<DiscordSocketClient>(sp => new DiscordSocketClient(new DiscordSocketConfig
         {
