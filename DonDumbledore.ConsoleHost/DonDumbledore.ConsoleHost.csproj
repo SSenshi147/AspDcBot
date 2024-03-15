@@ -26,6 +26,16 @@
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="Hangfire.Core" Version="1.8.11" />
+    <PackageReference Include="Hangfire.NetCore" Version="1.8.11" />
+    <PackageReference Include="Hangfire.Storage.SQLite" Version="0.4.1" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="8.0.3">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\DonDumbledore.Logic\DonDumbledore.Logic.csproj" />
   </ItemGroup>
 
