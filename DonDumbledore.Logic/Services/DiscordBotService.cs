@@ -2,6 +2,7 @@
 using Discord;
 using Discord.WebSocket;
 using DonDumbledore.Logic.Commands;
+using Hangfire;
 using MediatR;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
@@ -89,6 +90,7 @@ public class DiscordBotService(
         await Parallel.ForEachAsync(guilds, async (guild, _) =>
         {
             await guild.DeleteApplicationCommandsAsync();
+            logger.LogInformation("deleted guild commands, guild: {guildId}", guild.Id);
             await RegisterManualCommands(guild);
         });
     }
@@ -96,7 +98,11 @@ public class DiscordBotService(
     {
         var commands = await client.GetGlobalApplicationCommandsAsync();
 
-        foreach (var command in commands) await command.DeleteAsync();
+        foreach (var command in commands)
+        {
+            await command.DeleteAsync();
+            logger.LogInformation("deleted global command: {command}", command.Name);
+        }
     }
 
     private async Task RegisterManualCommands(SocketGuild guild)
@@ -106,18 +112,27 @@ public class DiscordBotService(
             var attribute = item.GetCustomAttribute<SlashCommandInfoAttribute>();
             if (attribute is null) continue;
 
-            var command = new SlashCommandBuilder()
-                .WithName(attribute.Name)
-                .WithDescription(attribute.Description)
-                .Build();
+            try
+            {
+                var command = new SlashCommandBuilder()
+                        .WithName(attribute.Name)
+                        .WithDescription(attribute.Description)
+                        .Build();
 
-            await guild.CreateApplicationCommandAsync(command);
+                await guild.CreateApplicationCommandAsync(command);
+                
+                logger.LogInformation("registered guild command for guildId: {guildId}, command: {command}", guild.Id, command.Name);
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "miagecivan");
+            }
         }
     }
 
     private async Task Client_SlashCommandExecuted(SocketSlashCommand arg)
     {
-        logger.LogInformation($"bot received slash command: {arg.CommandName}");
+        logger.LogInformation("bot received slash command: {commandName}", arg.CommandName);
 
         var type = _commands.FirstOrDefault(x =>
             x.GetCustomAttribute<SlashCommandInfoAttribute>()?.Name == arg.CommandName);
