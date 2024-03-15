@@ -114,11 +114,16 @@ public class DiscordBotService(
 
             try
             {
-                var command = new SlashCommandBuilder()
+                var commandBuilder = new SlashCommandBuilder()
                         .WithName(attribute.Name)
-                        .WithDescription(attribute.Description)
-                        .Build();
+                        .WithDescription(attribute.Description);
 
+                if (attribute.Option?.Length > 0)
+                {
+                    commandBuilder.AddOption(attribute.Option, ApplicationCommandOptionType.String, "temp", isRequired: true);
+                }
+                
+                var command = commandBuilder.Build();
                 await guild.CreateApplicationCommandAsync(command);
 
                 logger.LogInformation("registered guild command for guildId: {guildId}, command: {command}", guild.Id, command.Name);

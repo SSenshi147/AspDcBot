@@ -5,4 +5,5 @@ public class SlashCommandInfoAttribute(string name, string description) : Attrib
 {
     public string Name { get; } = name;
     public string Description { get; } = description;
+    public string? Option { get; init; }
 }

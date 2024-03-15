@@ -2,10 +2,13 @@
 
 namespace DonDumbledore.Logic.Requests;
 
-public class PingRequestHandler : IRequestHandler<PingRequest>
+public class PingRequestHandler : RequestBaseHandler<PingRequest>
 {
-    public async Task Handle(PingRequest request, CancellationToken cancellationToken)
+    protected override async Task HandleInternal(CancellationToken cancellationToken)
     {
-        await request.Arg.RespondAsync("pong");
+        var asd = Arg.Data.Options.SingleOrDefault(x => x.Name == "message") ?? throw new Exception();
+        var asd2 = (string)asd?.Value ?? throw new Exception();
+
+        await Arg.RespondAsync(text: $"pong: {asd2}");
     }
 }
