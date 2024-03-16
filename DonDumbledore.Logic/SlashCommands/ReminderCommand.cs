@@ -1,13 +1,20 @@
 ﻿using Discord;
 using Discord.WebSocket;
+using DonDumbledore.Logic.Data;
 using DonDumbledore.Logic.Requests;
+using Hangfire;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 
 namespace DonDumbledore.Logic.SlashCommands;
 
-public class ReminderCommand : IDonCommand
+public class ReminderCommand(
+    BotDbContext botDbContext,
+    DiscordSocketClient discordSocketClient,
+    ILogger<ReminderCommand> logger) : IDonCommand
 {
     public string Name => NAME;
-    
+
     private const string NAME = "reminder";
     private const string DESCRIPTION = "deals with reminders";
     private const string OPTION_ADD = "add";
@@ -48,135 +55,91 @@ public class ReminderCommand : IDonCommand
         return builer.Build();
     }
 
-    public async Task Handle(SocketSlashCommand command)
+    public async Task Handle(SocketSlashCommand arg)
     {
-        await command.RespondAsync(text: "sanyi");
+        await arg.RespondAsync(text: "received");
+        var subcommand = arg.Data.Options.SingleOrDefault();
+
+        switch (subcommand.Name)
+        {
+            case OPTION_ADD:
+                await HandleAdd(subcommand, arg);
+                break;
+            case OPTION_REMOVE:
+                await HandleRemove(subcommand, arg);
+                break;
+            default: break;
+        }
     }
 
-    //public async Task Handle(ReminderCommand request, CancellationToken cancellationToken)
-//    {
-//        var arg = request.Arg ?? throw new Exception();
+    private async Task HandleAdd(SocketSlashCommandDataOption option, SocketSlashCommand arg)
+    {
+        var jobName = (string)option.Options.SingleOrDefault(x => x.Name == OPTION_ADD_MESSAGE).Value;
+        var timing = (string)option.Options.SingleOrDefault(x => x.Name == OPTION_ADD_CRON).Value;
+
+        try
+        {
+            if (await botDbContext.JobDataModels.AnyAsync(x => x.JobId == jobName))
+            {
+                await arg.FollowupAsync(text: "job already exists");
+                return;
+            }
+
+            await botDbContext.JobDataModels.AddAsync(new JobData
+            {
+                JobId = jobName,
+                UserId = arg.User.Id,
+
+            });
+            await botDbContext.SaveChangesAsync();
+
+            RecurringJob.AddOrUpdate(jobName, () => PingTask(jobName), timing);
+            await arg.FollowupAsync(text: "job added");
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "error while adding recurring job test-pinger");
+        }
+    }
+
+    public async Task PingTask(string jobName)
+    {
+        try
+        {
+            var job = await botDbContext.JobDataModels.FirstOrDefaultAsync(x => x.JobId == jobName);
+            var user = await discordSocketClient.GetUserAsync(job.UserId);
+
+            await user.SendMessageAsync(text: $"ping {jobName}");
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "error while executing recurring job test-pinger");
+        }
+    }
+
+    private async Task HandleRemove(SocketSlashCommandDataOption option, SocketSlashCommand arg)
+    {
+        var jobId = (string)option.Options.SingleOrDefault(x => x.Name == OPTION_REMOVE_MESSAGE).Value;
         
-//        var jobName = (string)arg.GetDataByName(request.Message)!;
-//        var timing = (string)arg.GetDataByName(request.CronExpression)!;
+        try
+        {
+            var toRemove = await botDbContext.JobDataModels.FirstOrDefaultAsync(x => x.JobId == jobId);
 
-//        try
-//        {
-//            if (await botDbContext.JobDataModels.AnyAsync(x => x.JobId == jobName, cancellationToken))
-//            {
-//                await arg.RespondAsync(text: "job already exists");
-//                return;
-//            }
+            if (toRemove is null || toRemove == default)
+            {
+                await arg.FollowupAsync(text: "job doesnt exist");
+                return;
+            }
+            botDbContext.JobDataModels.Remove(toRemove);
+            await botDbContext.SaveChangesAsync();
 
-//            await botDbContext.JobDataModels.AddAsync(new JobData
-//            {
-//                JobId = jobName,
-//                UserId = arg.User.Id,
+            RecurringJob.RemoveIfExists(jobId);
 
-//            }, cancellationToken);
-//            await botDbContext.SaveChangesAsync(cancellationToken);
-
-//            RecurringJob.AddOrUpdate(jobName, () => PingTask(jobName), timing);
-//            await arg.RespondAsync(text: "job added");
-//        }
-//        catch (Exception ex)
-//        {
-//            logger.LogError(ex, "error while adding recurring job test-pinger");
-//        }
-//    }
-
-//    public async Task PingTask(string jobName)
-//    {
-//        try
-//        {
-//            var job = await botDbContext.JobDataModels.FirstOrDefaultAsync(x => x.JobId == jobName);
-//            var user = await discordSocketClient.GetUserAsync(job.UserId);
-
-//            await user.SendMessageAsync(text: $"ping {jobName}");
-//        }
-//        catch (Exception ex)
-//        {
-//            logger.LogError(ex, "error while executing recurring job test-pinger");
-//        }
-//    }
+            await arg.FollowupAsync(text: "job removed");
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "error while removing recurring job test-pinger");
+        }
+    }
 }
-
-//public class ReminderCommandHandler(
-//    BotDbContext botDbContext,
-//    ILogger<ReminderCommandHandler> logger,
-//    DiscordSocketClient discordSocketClient) : IRequestHandler<ReminderCommand>
-//{
-//    public async Task Handle(ReminderCommand request, CancellationToken cancellationToken)
-//    {
-//        var arg = request.Arg ?? throw new Exception();
-        
-//        var jobName = (string)arg.GetDataByName(request.Message)!;
-//        var timing = (string)arg.GetDataByName(request.CronExpression)!;
-
-//        try
-//        {
-//            if (await botDbContext.JobDataModels.AnyAsync(x => x.JobId == jobName, cancellationToken))
-//            {
-//                await arg.RespondAsync(text: "job already exists");
-//                return;
-//            }
-
-//            await botDbContext.JobDataModels.AddAsync(new JobData
-//            {
-//                JobId = jobName,
-//                UserId = arg.User.Id,
-
-//            }, cancellationToken);
-//            await botDbContext.SaveChangesAsync(cancellationToken);
-
-//            RecurringJob.AddOrUpdate(jobName, () => PingTask(jobName), timing);
-//            await arg.RespondAsync(text: "job added");
-//        }
-//        catch (Exception ex)
-//        {
-//            logger.LogError(ex, "error while adding recurring job test-pinger");
-//        }
-//    }
-
-//    public async Task PingTask(string jobName)
-//    {
-//        try
-//        {
-//            var job = await botDbContext.JobDataModels.FirstOrDefaultAsync(x => x.JobId == jobName);
-//            var user = await discordSocketClient.GetUserAsync(job.UserId);
-
-//            await user.SendMessageAsync(text: $"ping {jobName}");
-//        }
-//        catch (Exception ex)
-//        {
-//            logger.LogError(ex, "error while executing recurring job test-pinger");
-//        }
-//    }
-//}
-
-//public async Task Handle(PingQueueRemoveRequest request, CancellationToken cancellationToken)
-//    {
-//        var arg = request.Arg;
-//        var asd = request.Arg.Data.Options.SingleOrDefault(x => x.Name == "message") ?? throw new Exception();
-//    var jobId = (string)asd?.Value ?? throw new Exception();
-//    try
-//    {
-//            var toRemove = await botDbContext.JobDataModels.FirstOrDefaultAsync(x => x.JobId == jobId, cancellationToken);
-
-//            if (toRemove is null || toRemove == default)
-//            {
-//                await arg.RespondAsync(text: "job doesnt exist");
-//            return;
-//        }
-//        botDbContext.JobDataModels.Remove(toRemove);
-//            await botDbContext.SaveChangesAsync(cancellationToken);
-
-//            RecurringJob.RemoveIfExists(jobId);
-
-//            await arg.RespondAsync(text: "job removed");
-//    }
-//    catch (Exception ex)
-//    {
-//            logger.LogError(ex, "error while removing recurring job test-pinger");
-//        }
-//    }
