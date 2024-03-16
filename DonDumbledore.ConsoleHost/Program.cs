@@ -2,6 +2,7 @@
 using Discord.Interactions;
 using Discord.WebSocket;
 using DonDumbledore.Logic.Data;
+using DonDumbledore.Logic.Extensions;
 using DonDumbledore.Logic.Requests;
 using DonDumbledore.Logic.Services;
 using Hangfire;
@@ -37,12 +38,13 @@ internal class Program
         builder.Services.AddSingleton<DiscordSocketClient>();
         builder.Services.AddDbContext<BotDbContext>(opt => opt.UseSqlite(connectionString,
             x => x.MigrationsAssembly(Assembly.GetAssembly(typeof(BotDbContext))!.FullName)), ServiceLifetime.Singleton);
-        builder.Services.AddMediatR(config => config.RegisterServicesFromAssemblyContaining<RequestBase>());
+        builder.Services.AddMediatR(config => config.RegisterServicesFromAssemblyContaining<PingCommand>());
         builder.Services.AddSingleton<InteractionService>();
         builder.Services.AddSingleton<DiscordSocketClient>(sp => new DiscordSocketClient(new DiscordSocketConfig
         {
             GatewayIntents = GatewayIntents.All
         }));
+        builder.Services.RegisterCommands();
         builder.Services.AddHostedService<DiscordBotService>();
 
         builder.Build().Run();

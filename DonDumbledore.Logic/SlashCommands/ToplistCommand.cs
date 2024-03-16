@@ -1,16 +1,30 @@
-﻿using System.Text;
+﻿using Discord;
+using Discord.WebSocket;
 using DonDumbledore.Logic.Data;
-using MediatR;
 using Microsoft.EntityFrameworkCore;
+using System.Text;
 
 namespace DonDumbledore.Logic.Requests;
 
-public class ToplistRequestHandler(BotDbContext botDbContext) : IRequestHandler<ToplistRequest>
+public class ToplistCommand(BotDbContext botDbContext) : IDonCommand
 {
-    public async Task Handle(ToplistRequest request, CancellationToken cancellationToken)
-    {
-        var args = request.Arg;
+    public string Name => NAME;
 
+    private const string NAME = "toplist";
+    private const string DESCRIPTION = "Az intézet bentlakóinak statisztikája";
+
+    public SlashCommandProperties CreateProperties()
+    {
+        var builder = new SlashCommandBuilder();
+
+        builder.WithName(NAME);
+        builder.WithDescription(DESCRIPTION);
+
+        return builder.Build();
+    }
+
+    public async Task Handle(SocketSlashCommand arg)
+    {
         var result = await botDbContext
             .DrinkModels
             .GroupBy(x => x.UserId, (userId, models) => new
@@ -24,7 +38,7 @@ public class ToplistRequestHandler(BotDbContext botDbContext) : IRequestHandler<
                 arg1.Count
             })
             .OrderByDescending(x => x.Count)
-            .ToListAsync(cancellationToken);
+            .ToListAsync();
 
         var sb = new StringBuilder(result.Count);
         for (var i = 0; i < result.Count; i++)
@@ -33,6 +47,6 @@ public class ToplistRequestHandler(BotDbContext botDbContext) : IRequestHandler<
             sb.AppendLine($"{i + 1}. {item.Mention} - {item.Count} drogozási alkalom");
         }
 
-        await args.RespondAsync(sb.ToString());
+        await arg.RespondAsync(sb.ToString());
     }
 }
