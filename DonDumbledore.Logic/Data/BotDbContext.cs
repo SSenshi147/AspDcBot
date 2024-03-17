@@ -42,4 +42,5 @@ public class JobData
     [Key]
     public string JobId { get; set; }
     public ulong UserId { get; set; }
+    public string? ReminderJobId { get; set; }
 }

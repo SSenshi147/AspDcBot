@@ -37,7 +37,7 @@ internal class Program
 
         builder.Services.AddSingleton<DiscordSocketClient>();
         builder.Services.AddDbContext<BotDbContext>(opt => opt.UseSqlite(connectionString,
-            x => x.MigrationsAssembly(Assembly.GetAssembly(typeof(BotDbContext))!.FullName)), ServiceLifetime.Singleton);
+            x => x.MigrationsAssembly(Assembly.GetAssembly(typeof(BotDbContext))!.FullName)));
         builder.Services.AddMediatR(config => config.RegisterServicesFromAssemblyContaining<PingCommand>());
         builder.Services.AddSingleton<InteractionService>();
         builder.Services.AddSingleton<DiscordSocketClient>(sp => new DiscordSocketClient(new DiscordSocketConfig

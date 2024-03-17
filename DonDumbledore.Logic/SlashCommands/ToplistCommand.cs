@@ -2,11 +2,12 @@
 using Discord.WebSocket;
 using DonDumbledore.Logic.Data;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using System.Text;
 
 namespace DonDumbledore.Logic.Requests;
 
-public class ToplistCommand(BotDbContext botDbContext) : IDonCommand
+public class ToplistCommand(IServiceProvider serviceProvider) : IDonCommand
 {
     public string Name => NAME;
 
@@ -25,6 +26,9 @@ public class ToplistCommand(BotDbContext botDbContext) : IDonCommand
 
     public async Task Handle(SocketSlashCommand arg)
     {
+        using var scope = serviceProvider.CreateAsyncScope();
+        using var botDbContext = scope.ServiceProvider.GetRequiredService<BotDbContext>();
+
         var result = await botDbContext
             .DrinkModels
             .GroupBy(x => x.UserId, (userId, models) => new

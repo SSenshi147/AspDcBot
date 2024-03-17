@@ -5,14 +5,15 @@ using DonDumbledore.Logic.Data;
 using DonDumbledore.Logic.Requests;
 using Hangfire;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
 namespace DonDumbledore.Logic.SlashCommands;
 
 public class ReminderCommand(
-    BotDbContext botDbContext,
     DiscordSocketClient discordSocketClient,
-    ILogger<ReminderCommand> logger) : IDonCommand
+    ILogger<ReminderCommand> logger,
+    IServiceProvider serviceProvider) : IDonCommand
 {
     public string Name => NAME;
 
@@ -21,8 +22,11 @@ public class ReminderCommand(
     private const string OPTION_ADD = "add";
     private const string OPTION_ADD_MESSAGE = "message";
     private const string OPTION_ADD_CRON = "cron";
+    private const string OPTION_ADD_REMINDERCRON = "remindercron";
     private const string OPTION_REMOVE = "remove";
     private const string OPTION_REMOVE_MESSAGE = "message";
+    private const string OPTION_ACK = "ack";
+    private const string OPTION_ACK_MESSAGE = "message";
 
     public SlashCommandProperties CreateProperties()
     {
@@ -42,13 +46,27 @@ public class ReminderCommand(
                     .WithName(OPTION_ADD_CRON)
                     .WithDescription("the cronexpression of the job")
                     .WithType(ApplicationCommandOptionType.String)
-                    .WithRequired(true)))
+                    .WithRequired(true))
+                .AddOption(new SlashCommandOptionBuilder()
+                    .WithName(OPTION_ADD_REMINDERCRON)
+                    .WithDescription("the cronexpression of the reminder job")
+                    .WithType(ApplicationCommandOptionType.String)
+                    .WithRequired(false)))
             .AddOption(new SlashCommandOptionBuilder()
                 .WithName(OPTION_REMOVE)
                 .WithDescription("remove an existing reminder")
                 .WithType(ApplicationCommandOptionType.SubCommand)
                 .AddOption(new SlashCommandOptionBuilder()
                     .WithName(OPTION_REMOVE_MESSAGE)
+                    .WithDescription("the id of the job")
+                    .WithType(ApplicationCommandOptionType.String)
+                    .WithRequired(true)))
+            .AddOption(new SlashCommandOptionBuilder()
+                .WithName(OPTION_ACK)
+                .WithDescription("acknowledges job, stops reminding")
+                .WithType(ApplicationCommandOptionType.SubCommand)
+                .AddOption(new SlashCommandOptionBuilder()
+                    .WithName(OPTION_ACK_MESSAGE)
                     .WithDescription("the id of the job")
                     .WithType(ApplicationCommandOptionType.String)
                     .WithRequired(true)));
@@ -58,18 +76,28 @@ public class ReminderCommand(
 
     public async Task Handle(SocketSlashCommand arg)
     {
-        await arg.RespondAsync(text: "received");
-        var subcommand = arg.Data.Options.SingleOrDefault();
-
-        switch (subcommand.Name)
+        try
         {
-            case OPTION_ADD:
-                await HandleAdd(subcommand, arg);
-                break;
-            case OPTION_REMOVE:
-                await HandleRemove(subcommand, arg);
-                break;
-            default: break;
+            await arg.RespondAsync(text: "received");
+            var subcommand = arg.Data.Options.SingleOrDefault();
+
+            switch (subcommand.Name)
+            {
+                case OPTION_ADD:
+                    await HandleAdd(subcommand, arg);
+                    break;
+                case OPTION_REMOVE:
+                    await HandleRemove(subcommand, arg);
+                    break;
+                case OPTION_ACK:
+                    await HandleAck(subcommand, arg);
+                    break;
+                default: break;
+            }
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "miafaszvan");
         }
     }
 
@@ -77,6 +105,10 @@ public class ReminderCommand(
     {
         var jobName = (string)option.Options.SingleOrDefault(x => x.Name == OPTION_ADD_MESSAGE).Value;
         var timing = (string)option.Options.SingleOrDefault(x => x.Name == OPTION_ADD_CRON).Value;
+        var reminderTiming = (string?)option.Options.SingleOrDefault(x => x.Name == OPTION_ADD_REMINDERCRON)?.Value;
+
+        using var scope = serviceProvider.CreateAsyncScope();
+        using var botDbContext = scope.ServiceProvider.GetRequiredService<BotDbContext>();
 
         try
         {
@@ -92,15 +124,20 @@ public class ReminderCommand(
                 return;
             }
 
+            if (reminderTiming?.Length > 0 && !CronExpression.TryParse(reminderTiming, out _))
+            {
+                await arg.FollowupAsync(text: "invalid cron");
+                return;
+            }
+
             await botDbContext.JobDataModels.AddAsync(new JobData
             {
                 JobId = jobName,
                 UserId = arg.User.Id,
-
             });
             await botDbContext.SaveChangesAsync();
+            RecurringJob.AddOrUpdate(jobName, () => PingTask(jobName, reminderTiming), timing);
 
-            RecurringJob.AddOrUpdate(jobName, () => PingTask(jobName), timing);
             await arg.FollowupAsync(text: "job added");
         }
         catch (Exception ex)
@@ -109,18 +146,50 @@ public class ReminderCommand(
         }
     }
 
-    public async Task PingTask(string jobName)
+    public async Task PingTask(string jobName, string? recurringCron = null)
     {
         try
         {
+            using var scope = serviceProvider.CreateAsyncScope();
+            using var botDbContext = scope.ServiceProvider.GetRequiredService<BotDbContext>();
+
             var job = await botDbContext.JobDataModels.FirstOrDefaultAsync(x => x.JobId == jobName);
             var user = await discordSocketClient.GetUserAsync(job.UserId);
 
-            await user.SendMessageAsync(text: $"ping {jobName}");
+            var message = await user.SendMessageAsync(text: $"ping {jobName}");
+
+            if (recurringCron?.Length > 0 && job.ReminderJobId is null)
+            {
+                var reminderJobId = $"{job.JobId}-reminder";
+                job.ReminderJobId = reminderJobId;
+
+                try
+                {
+                    RecurringJob.AddOrUpdate(reminderJobId, () => PingTaskReminder(jobName), recurringCron);
+                    botDbContext.JobDataModels.Update(job);
+                    await botDbContext.SaveChangesAsync();
+                }
+                catch (Exception ex)
+                {
+                    logger.LogError(ex, "ilyen nincs bazmeg");
+                }
+            }
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "error while executing recurring job test-pinger");
+        }
+    }
+
+    public void PingTaskReminder(string originalJobName)
+    {
+        try
+        {
+            RecurringJob.TriggerJob(originalJobName);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "error while executing recurring job reminder");
         }
     }
 
@@ -130,6 +199,9 @@ public class ReminderCommand(
 
         try
         {
+            using var scope = serviceProvider.CreateAsyncScope();
+            using var botDbContext = scope.ServiceProvider.GetRequiredService<BotDbContext>();
+
             var toRemove = await botDbContext.JobDataModels.FirstOrDefaultAsync(x => x.JobId == jobId);
 
             if (toRemove is null || toRemove == default)
@@ -137,12 +209,43 @@ public class ReminderCommand(
                 await arg.FollowupAsync(text: "job doesnt exist");
                 return;
             }
+
             botDbContext.JobDataModels.Remove(toRemove);
             await botDbContext.SaveChangesAsync();
 
             RecurringJob.RemoveIfExists(jobId);
 
             await arg.FollowupAsync(text: "job removed");
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "error while removing recurring job test-pinger");
+        }
+    }
+
+    private async Task HandleAck(SocketSlashCommandDataOption option, SocketSlashCommand arg)
+    {
+        var jobId = (string)option.Options.SingleOrDefault(x => x.Name == OPTION_ACK_MESSAGE).Value;
+
+        try
+        {
+            using var scope = serviceProvider.CreateAsyncScope();
+            using var botDbContext = scope.ServiceProvider.GetRequiredService<BotDbContext>();
+
+            var toRemove = await botDbContext.JobDataModels.FirstOrDefaultAsync(x => x.JobId == jobId);
+
+            if (toRemove is null || toRemove == default)
+            {
+                await arg.FollowupAsync(text: "job doesnt exist");
+                return;
+            }
+
+            RecurringJob.RemoveIfExists(toRemove.ReminderJobId);
+            toRemove.ReminderJobId = null;
+            botDbContext.JobDataModels.Update(toRemove);
+            await botDbContext.SaveChangesAsync();
+
+            await arg.FollowupAsync(text: "acknowledged");
         }
         catch (Exception ex)
         {
