@@ -1,4 +1,5 @@
-﻿using Discord;
+﻿using Cronos;
+using Discord;
 using Discord.WebSocket;
 using DonDumbledore.Logic.Data;
 using DonDumbledore.Logic.Requests;
@@ -85,6 +86,12 @@ public class ReminderCommand(
                 return;
             }
 
+            if (!CronExpression.TryParse(timing, out _))
+            {
+                await arg.FollowupAsync(text: "invalid cron");
+                return;
+            }
+
             await botDbContext.JobDataModels.AddAsync(new JobData
             {
                 JobId = jobName,
@@ -120,7 +127,7 @@ public class ReminderCommand(
     private async Task HandleRemove(SocketSlashCommandDataOption option, SocketSlashCommand arg)
     {
         var jobId = (string)option.Options.SingleOrDefault(x => x.Name == OPTION_REMOVE_MESSAGE).Value;
-        
+
         try
         {
             var toRemove = await botDbContext.JobDataModels.FirstOrDefaultAsync(x => x.JobId == jobId);
