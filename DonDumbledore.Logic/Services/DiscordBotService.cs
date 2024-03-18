@@ -7,6 +7,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using System;
 
 namespace DonDumbledore.Logic.Services;
 
@@ -111,6 +112,22 @@ public class DiscordBotService(
             await command.DeleteAsync();
             logger.LogInformation("deleted global command: {command}", command.Name);
         }
+
+        var services = serviceProvider.GetServices<IDonCommand>();
+        foreach (var service in services)
+        {
+            try
+            {
+                var command = service.CreateProperties();
+                await client.CreateGlobalApplicationCommandAsync(command);
+
+                logger.LogInformation("global command: {commandName} registered", command.Name);
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "error while registering global command: {commandName}", service.Name);
+            }
+        }
     }
 
     private async Task RegisterInterfaceCommands(SocketGuild guild)
@@ -119,7 +136,7 @@ public class DiscordBotService(
         {
             return;
         }
-        
+
         await guild.DeleteApplicationCommandsAsync();
         logger.LogInformation("deleted guild commands, guild: {guildId}", guild.Id);
 
@@ -131,11 +148,11 @@ public class DiscordBotService(
                 var command = service.CreateProperties();
                 await guild.CreateApplicationCommandAsync(command);
 
-                logger.LogInformation("command: {commandName} registered", command.Name);
+                logger.LogInformation("guild command: {commandName} registered", command.Name);
             }
             catch (Exception ex)
             {
-                logger.LogError(ex, "error while registering interface command");
+                logger.LogError(ex, "error while registering guild command: {commandName}", service.Name);
             }
         }
     }
