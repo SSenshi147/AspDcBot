@@ -1,6 +1,7 @@
 ﻿using Discord;
 using Discord.Interactions;
 using Discord.WebSocket;
+using DonDumbledore.Logic;
 using DonDumbledore.Logic.Data;
 using DonDumbledore.Logic.Extensions;
 using DonDumbledore.Logic.Requests;
@@ -28,6 +29,8 @@ internal class Program
 
         var envName = builder.Environment.ApplicationName;
         var isDev = builder.Environment.IsDevelopment(); // DOTNET_ENVIRONMENT = Development variable
+
+        builder.Services.Configure<DonDumbledoreConfig>(builder.Configuration);
 
         builder.Services.AddHangfire(config =>
         {

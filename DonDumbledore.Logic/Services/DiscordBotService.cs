@@ -3,10 +3,10 @@ using Discord.WebSocket;
 using DonDumbledore.Logic.Notifications;
 using DonDumbledore.Logic.Requests;
 using MediatR;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace DonDumbledore.Logic.Services;
 
@@ -14,18 +14,18 @@ public class DiscordBotService(
     DiscordSocketClient client,
     IMediator mediator,
     ILogger<DiscordBotService> logger,
-    IConfiguration configuration,
-    IServiceProvider serviceProvider) : IHostedService
+    IServiceProvider serviceProvider,
+    IOptions<DonDumbledoreConfig> options) : IHostedService
 {
-    private const string TOKEN_KEY = "BotToken";
+    private readonly DonDumbledoreConfig _config = options.Value;
 
     public async Task StartAsync(CancellationToken cancellationToken)
     {
         logger.LogInformation("starting bot");
-        var token = configuration[TOKEN_KEY];
+        var token = _config.BotToken;
         if (token is null)
         {
-            logger.LogWarning($"environment variable {TOKEN_KEY} not found, bot will not launch");
+            logger.LogWarning($"bot token not found, bot will not launch");
             return;
         }
 
@@ -94,13 +94,16 @@ public class DiscordBotService(
 
         await Parallel.ForEachAsync(guilds, async (guild, _) =>
         {
-            await guild.DeleteApplicationCommandsAsync();
-            logger.LogInformation("deleted guild commands, guild: {guildId}", guild.Id);
             await RegisterInterfaceCommands(guild);
         });
     }
     private async Task ClearGlobalCommands()
     {
+        if (!_config.DeleteAndReRegisterGlobalCommands)
+        {
+            return;
+        }
+
         var commands = await client.GetGlobalApplicationCommandsAsync();
 
         foreach (var command in commands)
@@ -112,6 +115,14 @@ public class DiscordBotService(
 
     private async Task RegisterInterfaceCommands(SocketGuild guild)
     {
+        if (!_config.DeleteAndReRegisterGuildCommands)
+        {
+            return;
+        }
+        
+        await guild.DeleteApplicationCommandsAsync();
+        logger.LogInformation("deleted guild commands, guild: {guildId}", guild.Id);
+
         var services = serviceProvider.GetServices<IDonCommand>();
         foreach (var service in services)
         {
