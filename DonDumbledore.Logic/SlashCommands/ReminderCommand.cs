@@ -13,7 +13,7 @@ namespace DonDumbledore.Logic.SlashCommands;
 public class ReminderCommand(
     DiscordSocketClient discordSocketClient,
     ILogger<ReminderCommand> logger,
-    IServiceProvider serviceProvider) : IDonCommand
+    IServiceProvider serviceProvider)// : IDonCommand - WIP
 {
     public string Name => NAME;
 
