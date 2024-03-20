@@ -7,6 +7,7 @@ public class BotDbContext(DbContextOptions options) : DbContext(options)
 {
     public DbSet<DrinkModel> DrinkModels { get; set; }
     public DbSet<UserData> UserDataModels { get; set; }
+    public DbSet<JobData> JobDataModels { get; set; }
 }
 
 public class DrinkModel
@@ -34,4 +35,12 @@ public class UserData
 
     public string UserName { get; set; }
     public string Mention { get; set; }
+}
+
+public class JobData
+{
+    [Key]
+    public string JobId { get; set; }
+    public ulong UserId { get; set; }
+    public string? ReminderJobId { get; set; }
 }

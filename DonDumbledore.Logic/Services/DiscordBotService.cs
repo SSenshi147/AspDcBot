@@ -1,13 +1,12 @@
-﻿using System.Reflection;
-using Discord;
+﻿using Discord;
 using Discord.WebSocket;
-using DonDumbledore.Logic.Attributes;
 using DonDumbledore.Logic.Notifications;
 using DonDumbledore.Logic.Requests;
 using MediatR;
-using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace DonDumbledore.Logic.Services;
 
@@ -15,19 +14,18 @@ public class DiscordBotService(
     DiscordSocketClient client,
     IMediator mediator,
     ILogger<DiscordBotService> logger,
-    IConfiguration configuration) : IHostedService
+    IServiceProvider serviceProvider,
+    IOptions<DonDumbledoreConfig> options) : IHostedService
 {
-    private const string TokenKey = "BotToken";
-
-    private readonly IEnumerable<Type> _commands = Assembly.GetExecutingAssembly().GetTypes().Where(x => x.IsSubclassOf(typeof(RequestBase)));
+    private readonly DonDumbledoreConfig _config = options.Value;
 
     public async Task StartAsync(CancellationToken cancellationToken)
     {
         logger.LogInformation("starting bot");
-        var token = configuration[TokenKey];
+        var token = _config.BotToken;
         if (token is null)
         {
-            logger.LogWarning($"environment variable {TokenKey} not found, bot will not launch");
+            logger.LogWarning($"bot token not found, bot will not launch");
             return;
         }
 
@@ -40,11 +38,18 @@ public class DiscordBotService(
         client.Connected += Client_Connected;
         client.SlashCommandExecuted += Client_SlashCommandExecuted;
         client.MessageReceived += Client_MessageReceived;
+        client.Log += Client_Log;
 
         await client.LoginAsync(TokenType.Bot, token);
         logger.LogInformation("bot successfully logged in");
         await client.StartAsync();
         logger.LogInformation("bot successfully started");
+    }
+
+    private Task Client_Log(LogMessage arg)
+    {
+        logger.LogInformation("bot implicit log: {message}", arg.Message);
+        return Task.CompletedTask;
     }
 
     private async Task Client_MessageReceived(SocketMessage arg)
@@ -89,13 +94,17 @@ public class DiscordBotService(
 
         await Parallel.ForEachAsync(guilds, async (guild, _) =>
         {
-            await guild.DeleteApplicationCommandsAsync();
-            logger.LogInformation("deleted guild commands, guild: {guildId}", guild.Id);
-            await RegisterManualCommands(guild);
+            await RegisterInterfaceCommands(guild);
         });
     }
+    
     private async Task ClearGlobalCommands()
     {
+        if (!_config.DeleteAndReRegisterGlobalCommands)
+        {
+            return;
+        }
+
         var commands = await client.GetGlobalApplicationCommandsAsync();
 
         foreach (var command in commands)
@@ -103,29 +112,47 @@ public class DiscordBotService(
             await command.DeleteAsync();
             logger.LogInformation("deleted global command: {command}", command.Name);
         }
-    }
 
-    private async Task RegisterManualCommands(SocketGuild guild)
-    {
-        foreach (var item in _commands)
+        var services = serviceProvider.GetServices<IDonCommand>();
+        foreach (var service in services)
         {
-            var attribute = item.GetCustomAttribute<SlashCommandInfoAttribute>();
-            if (attribute is null) continue;
-
             try
             {
-                var command = new SlashCommandBuilder()
-                        .WithName(attribute.Name)
-                        .WithDescription(attribute.Description)
-                        .Build();
+                var command = service.CreateProperties();
+                await client.CreateGlobalApplicationCommandAsync(command);
 
-                await guild.CreateApplicationCommandAsync(command);
-
-                logger.LogInformation("registered guild command for guildId: {guildId}, command: {command}", guild.Id, command.Name);
+                logger.LogInformation("global command: {commandName} registered", command.Name);
             }
             catch (Exception ex)
             {
-                logger.LogError(ex, "miagecivan");
+                logger.LogError(ex, "error while registering global command: {commandName}", service.Name);
+            }
+        }
+    }
+
+    private async Task RegisterInterfaceCommands(SocketGuild guild)
+    {
+        if (!_config.DeleteAndReRegisterGuildCommands)
+        {
+            return;
+        }
+
+        await guild.DeleteApplicationCommandsAsync();
+        logger.LogInformation("deleted guild commands, guild: {guildId}", guild.Id);
+
+        var services = serviceProvider.GetServices<IDonCommand>();
+        foreach (var service in services)
+        {
+            try
+            {
+                var command = service.CreateProperties();
+                await guild.CreateApplicationCommandAsync(command);
+
+                logger.LogInformation("guild command: {commandName} registered", command.Name);
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "error while registering guild command: {commandName}", service.Name);
             }
         }
     }
@@ -134,12 +161,13 @@ public class DiscordBotService(
     {
         logger.LogInformation("bot received slash command: {commandName}", arg.CommandName);
 
-        var type = _commands.FirstOrDefault(x => x.GetCustomAttribute<SlashCommandInfoAttribute>()?.Name == arg.CommandName);
-        if (type is null) return;
+        var handler = serviceProvider.GetServices<IDonCommand>().SingleOrDefault(x => x.Name == arg.CommandName);
+        if (handler is null)
+        {
+            logger.LogWarning("handler not found for command: {commandName}", arg.CommandName);
+            return;
+        }
 
-        var instance = Activator.CreateInstance(type, arg);
-        if (instance is null) return;
-
-        await mediator.Send(instance);
+        await handler.Handle(arg);
     }
 }
