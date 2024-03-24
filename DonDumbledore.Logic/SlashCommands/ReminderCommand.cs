@@ -146,7 +146,10 @@ public class ReminderCommand(
                 Message = message,
             })).Entity;
             await botDbContext.SaveChangesAsync();
-            RecurringJob.AddOrUpdate(newJob.HangfireJobId, () => PingTask(newJob, reminderTiming), timing);
+            RecurringJob.AddOrUpdate(newJob.HangfireJobId, () => PingTask(newJob, reminderTiming), timing, new RecurringJobOptions
+            {
+                TimeZone = TimeZoneInfo.Local
+            });
 
             await arg.FollowupAsync(text: "job added");
         }
@@ -180,7 +183,10 @@ public class ReminderCommand(
 
                 try
                 {
-                    RecurringJob.AddOrUpdate(job.HangfireReminderJobId, () => PingTaskReminder(job.HangfireJobId), recurringCron);
+                    RecurringJob.AddOrUpdate(job.HangfireReminderJobId, () => PingTaskReminder(job.HangfireJobId), recurringCron, new RecurringJobOptions
+                    {
+                        TimeZone = TimeZoneInfo.Local
+                    });
                     botDbContext.JobDataModels.Update(job);
                     await botDbContext.SaveChangesAsync();
                 }
