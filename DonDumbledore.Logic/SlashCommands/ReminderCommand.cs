@@ -13,20 +13,21 @@ namespace DonDumbledore.Logic.SlashCommands;
 public class ReminderCommand(
     DiscordSocketClient discordSocketClient,
     ILogger<ReminderCommand> logger,
-    IServiceProvider serviceProvider)// : IDonCommand - WIP
+    IServiceProvider serviceProvider) : IDonCommand
 {
     public string Name => NAME;
 
     private const string NAME = "reminder";
     private const string DESCRIPTION = "deals with reminders";
     private const string OPTION_ADD = "add";
-    private const string OPTION_ADD_MESSAGE = "message";
+    private const string OPTION_ADD_ID = "id";
     private const string OPTION_ADD_CRON = "cron";
     private const string OPTION_ADD_REMINDERCRON = "remindercron";
+    private const string OPTION_ADD_MESSAGE = "message";
     private const string OPTION_REMOVE = "remove";
-    private const string OPTION_REMOVE_MESSAGE = "message";
+    private const string OPTION_REMOVE_ID = "id";
     private const string OPTION_ACK = "ack";
-    private const string OPTION_ACK_MESSAGE = "message";
+    private const string OPTION_ACK_ID = "id";
 
     public SlashCommandProperties CreateProperties()
     {
@@ -38,7 +39,7 @@ public class ReminderCommand(
                 .WithDescription("add a new reminder")
                 .WithType(ApplicationCommandOptionType.SubCommand)
                 .AddOption(new SlashCommandOptionBuilder()
-                    .WithName(OPTION_ADD_MESSAGE)
+                    .WithName(OPTION_ADD_ID)
                     .WithDescription("the id of the job and the message to send")
                     .WithType(ApplicationCommandOptionType.String)
                     .WithRequired(true))
@@ -47,6 +48,11 @@ public class ReminderCommand(
                     .WithDescription("the cronexpression of the job")
                     .WithType(ApplicationCommandOptionType.String)
                     .WithRequired(true))
+                .AddOption(new SlashCommandOptionBuilder()
+                    .WithName(OPTION_ADD_MESSAGE)
+                    .WithDescription("the message to send, if not set, the id will be sent")
+                    .WithType(ApplicationCommandOptionType.String)
+                    .WithRequired(false))
                 .AddOption(new SlashCommandOptionBuilder()
                     .WithName(OPTION_ADD_REMINDERCRON)
                     .WithDescription("the cronexpression of the reminder job")
@@ -57,7 +63,7 @@ public class ReminderCommand(
                 .WithDescription("remove an existing reminder")
                 .WithType(ApplicationCommandOptionType.SubCommand)
                 .AddOption(new SlashCommandOptionBuilder()
-                    .WithName(OPTION_REMOVE_MESSAGE)
+                    .WithName(OPTION_REMOVE_ID)
                     .WithDescription("the id of the job")
                     .WithType(ApplicationCommandOptionType.String)
                     .WithRequired(true)))
@@ -66,7 +72,7 @@ public class ReminderCommand(
                 .WithDescription("acknowledges job, stops reminding")
                 .WithType(ApplicationCommandOptionType.SubCommand)
                 .AddOption(new SlashCommandOptionBuilder()
-                    .WithName(OPTION_ACK_MESSAGE)
+                    .WithName(OPTION_ACK_ID)
                     .WithDescription("the id of the job")
                     .WithType(ApplicationCommandOptionType.String)
                     .WithRequired(true)));
@@ -103,16 +109,19 @@ public class ReminderCommand(
 
     private async Task HandleAdd(SocketSlashCommandDataOption option, SocketSlashCommand arg)
     {
-        var jobName = (string)option.Options.SingleOrDefault(x => x.Name == OPTION_ADD_MESSAGE).Value;
+        var jobName = (string)option.Options.SingleOrDefault(x => x.Name == OPTION_ADD_ID).Value;
         var timing = (string)option.Options.SingleOrDefault(x => x.Name == OPTION_ADD_CRON).Value;
         var reminderTiming = (string?)option.Options.SingleOrDefault(x => x.Name == OPTION_ADD_REMINDERCRON)?.Value;
+        var message = (string?)option.Options.SingleOrDefault(x => x.Name == OPTION_ADD_MESSAGE)?.Value;
 
         using var scope = serviceProvider.CreateAsyncScope();
         using var botDbContext = scope.ServiceProvider.GetRequiredService<BotDbContext>();
 
         try
         {
-            if (await botDbContext.JobDataModels.AnyAsync(x => x.JobId == jobName))
+            var channelId = arg.Channel.Id;
+
+            if (await botDbContext.JobDataModels.AnyAsync(x => x.JobId == jobName && x.ChannelId == arg.Channel.Id))
             {
                 await arg.FollowupAsync(text: "job already exists");
                 return;
@@ -120,23 +129,24 @@ public class ReminderCommand(
 
             if (!CronExpression.TryParse(timing, out _))
             {
-                await arg.FollowupAsync(text: "invalid cron");
+                await arg.FollowupAsync(text: $"invalid cron: {nameof(timing)}");
                 return;
             }
 
             if (reminderTiming?.Length > 0 && !CronExpression.TryParse(reminderTiming, out _))
             {
-                await arg.FollowupAsync(text: "invalid cron");
+                await arg.FollowupAsync(text: $"invalid cron: {nameof(reminderTiming)}");
                 return;
             }
 
-            await botDbContext.JobDataModels.AddAsync(new JobData
+            var newJob = (await botDbContext.JobDataModels.AddAsync(new JobData
             {
                 JobId = jobName,
-                UserId = arg.User.Id,
-            });
+                ChannelId = channelId,
+                Message = message,
+            })).Entity;
             await botDbContext.SaveChangesAsync();
-            RecurringJob.AddOrUpdate(jobName, () => PingTask(jobName, reminderTiming), timing);
+            RecurringJob.AddOrUpdate(newJob.HangfireJobId, () => PingTask(newJob, reminderTiming), timing);
 
             await arg.FollowupAsync(text: "job added");
         }
@@ -146,26 +156,31 @@ public class ReminderCommand(
         }
     }
 
-    public async Task PingTask(string jobName, string? recurringCron = null)
+    public async Task PingTask(JobData jobData, string? recurringCron = null)
     {
         try
         {
             using var scope = serviceProvider.CreateAsyncScope();
             using var botDbContext = scope.ServiceProvider.GetRequiredService<BotDbContext>();
 
-            var job = await botDbContext.JobDataModels.FirstOrDefaultAsync(x => x.JobId == jobName);
-            var user = await discordSocketClient.GetUserAsync(job.UserId);
+            var job = await botDbContext.JobDataModels.FirstOrDefaultAsync(x => x.JobId == jobData.JobId && x.ChannelId == jobData.ChannelId);
+            var channel = await discordSocketClient.GetChannelAsync(job.ChannelId);
 
-            var message = await user.SendMessageAsync(text: $"ping {jobName}");
+            if (channel is not IMessageChannel messageChannel)
+            {
+                logger.LogWarning("channel {channelId} is not IMessageChannel", channel.Id);
+                return;
+            }
+
+            var message = await messageChannel.SendMessageAsync(text: $"[{jobData.JobId}]: {jobData.Message ?? jobData.JobId}");
 
             if (recurringCron?.Length > 0 && job.ReminderJobId is null)
             {
-                var reminderJobId = $"{job.JobId}-reminder";
-                job.ReminderJobId = reminderJobId;
+                job.ReminderJobId = job.HangfireReminderJobId;
 
                 try
                 {
-                    RecurringJob.AddOrUpdate(reminderJobId, () => PingTaskReminder(jobName), recurringCron);
+                    RecurringJob.AddOrUpdate(job.HangfireReminderJobId, () => PingTaskReminder(job.HangfireJobId), recurringCron);
                     botDbContext.JobDataModels.Update(job);
                     await botDbContext.SaveChangesAsync();
                 }
@@ -195,14 +210,14 @@ public class ReminderCommand(
 
     private async Task HandleRemove(SocketSlashCommandDataOption option, SocketSlashCommand arg)
     {
-        var jobId = (string)option.Options.SingleOrDefault(x => x.Name == OPTION_REMOVE_MESSAGE).Value;
+        var jobId = (string)option.Options.SingleOrDefault(x => x.Name == OPTION_REMOVE_ID).Value;
 
         try
         {
             using var scope = serviceProvider.CreateAsyncScope();
             using var botDbContext = scope.ServiceProvider.GetRequiredService<BotDbContext>();
 
-            var toRemove = await botDbContext.JobDataModels.FirstOrDefaultAsync(x => x.JobId == jobId);
+            var toRemove = await botDbContext.JobDataModels.FirstOrDefaultAsync(x => x.JobId == jobId && x.ChannelId == arg.Channel.Id);
 
             if (toRemove is null || toRemove == default)
             {
@@ -210,10 +225,10 @@ public class ReminderCommand(
                 return;
             }
 
+            RecurringJob.RemoveIfExists(toRemove.HangfireJobId);
+
             botDbContext.JobDataModels.Remove(toRemove);
             await botDbContext.SaveChangesAsync();
-
-            RecurringJob.RemoveIfExists(jobId);
 
             await arg.FollowupAsync(text: "job removed");
         }
@@ -225,14 +240,14 @@ public class ReminderCommand(
 
     private async Task HandleAck(SocketSlashCommandDataOption option, SocketSlashCommand arg)
     {
-        var jobId = (string)option.Options.SingleOrDefault(x => x.Name == OPTION_ACK_MESSAGE).Value;
+        var jobId = (string)option.Options.SingleOrDefault(x => x.Name == OPTION_ACK_ID).Value;
 
         try
         {
             using var scope = serviceProvider.CreateAsyncScope();
             using var botDbContext = scope.ServiceProvider.GetRequiredService<BotDbContext>();
 
-            var toRemove = await botDbContext.JobDataModels.FirstOrDefaultAsync(x => x.JobId == jobId);
+            var toRemove = await botDbContext.JobDataModels.FirstOrDefaultAsync(x => x.JobId == jobId && x.ChannelId == arg.Channel.Id);
 
             if (toRemove is null || toRemove == default)
             {
@@ -240,7 +255,7 @@ public class ReminderCommand(
                 return;
             }
 
-            RecurringJob.RemoveIfExists(toRemove.ReminderJobId);
+            RecurringJob.RemoveIfExists(toRemove.HangfireReminderJobId);
             toRemove.ReminderJobId = null;
             botDbContext.JobDataModels.Update(toRemove);
             await botDbContext.SaveChangesAsync();

@@ -1,4 +1,5 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 using Microsoft.EntityFrameworkCore;
 
 namespace DonDumbledore.Logic.Data;
@@ -37,10 +38,16 @@ public class UserData
     public string Mention { get; set; }
 }
 
+[PrimaryKey(nameof(JobId), nameof(ChannelId))]
 public class JobData
 {
-    [Key]
     public string JobId { get; set; }
-    public ulong UserId { get; set; }
+    public ulong ChannelId { get; set; }
     public string? ReminderJobId { get; set; }
+    public string? Message { get; set; }
+
+    [NotMapped]
+    public string HangfireJobId => $"{ChannelId}-{JobId}";
+    [NotMapped]
+    public string HangfireReminderJobId => $"{HangfireJobId}-reminder";
 }
