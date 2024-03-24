@@ -101,6 +101,7 @@ public class DiscordBotService(
         client.Connected -= Client_Connected;
         client.SlashCommandExecuted -= Client_SlashCommandExecuted;
         client.MessageReceived -= Client_MessageReceived;
+        client.Log -= Client_Log;
 
         await client.LogoutAsync();
         logger.LogInformation("bot successfully logged out");
