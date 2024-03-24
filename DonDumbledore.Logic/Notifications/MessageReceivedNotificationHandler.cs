@@ -2,11 +2,12 @@
 using DonDumbledore.Logic.Data;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace DonDumbledore.Logic.Notifications;
 
 public class MessageReceivedNotificationHandler(
-    BotDbContext botDbContext) : INotificationHandler<MessageReceivedNotification>
+    IServiceProvider serviceProvider) : INotificationHandler<MessageReceivedNotification>
 {
     private const string tatakaeve = ":tatakaeve:";
     private const string coffee = "☕";
@@ -15,7 +16,7 @@ public class MessageReceivedNotificationHandler(
     private readonly string[] coffees = [tatakaeve, coffee];
     private readonly string[] drinks = [tatakaeve, coffee, tea];
     private readonly string[] teas = [tea];
-
+    
     public async Task Handle(MessageReceivedNotification notification, CancellationToken cancellationToken)
     {
         var arg = notification.SocketMessage;
@@ -23,6 +24,9 @@ public class MessageReceivedNotificationHandler(
         if (arg.Author.IsBot) return;
 
         if (!drinks.Contains(arg.CleanContent)) return;
+
+        using var scope = serviceProvider.CreateAsyncScope();
+        using var botDbContext = scope.ServiceProvider.GetRequiredService<BotDbContext>();
 
         if (!await botDbContext.UserDataModels.AnyAsync(x => x.UserId == arg.Author.Id, cancellationToken))
         {

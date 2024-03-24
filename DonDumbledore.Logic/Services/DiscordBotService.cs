@@ -48,7 +48,31 @@ public class DiscordBotService(
 
     private Task Client_Log(LogMessage arg)
     {
-        logger.LogInformation("bot implicit log: {message}", arg.Message);
+        switch (arg.Severity)
+        {
+            case LogSeverity.Critical:
+                logger.LogCritical(arg.Exception, "bot unhandled: {message}", arg.Message);
+                break;
+            case LogSeverity.Error:
+                logger.LogError(arg.Exception, "bot unhandled: {message}", arg.Message);
+                break;
+            case LogSeverity.Warning:
+                logger.LogWarning(arg.Exception, "bot unhandled: {message}", arg.Message);
+                break;
+            case LogSeverity.Info:
+                logger.LogInformation(arg.Exception, "bot unhandled: {message}", arg.Message);
+                break;
+            case LogSeverity.Verbose:
+                logger.LogInformation(arg.Exception, "bot unhandled: {message}", arg.Message);
+                break;
+            case LogSeverity.Debug:
+                logger.LogDebug(arg.Exception, "bot unhandled: {message}", arg.Message);
+                break;
+            default:
+                logger.LogInformation(arg.Exception, "bot unhandled: {message}", arg.Message);
+                break;
+        }
+
         return Task.CompletedTask;
     }
 
