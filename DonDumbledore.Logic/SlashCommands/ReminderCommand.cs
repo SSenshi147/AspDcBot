@@ -20,13 +20,14 @@ public class ReminderCommand(
     private const string NAME = "reminder";
     private const string DESCRIPTION = "deals with reminders";
     private const string OPTION_ADD = "add";
-    private const string OPTION_ADD_MESSAGE = "message";
+    private const string OPTION_ADD_ID = "id";
     private const string OPTION_ADD_CRON = "cron";
     private const string OPTION_ADD_REMINDERCRON = "remindercron";
+    private const string OPTION_ADD_MESSAGE = "message";
     private const string OPTION_REMOVE = "remove";
-    private const string OPTION_REMOVE_MESSAGE = "message";
+    private const string OPTION_REMOVE_ID = "id";
     private const string OPTION_ACK = "ack";
-    private const string OPTION_ACK_MESSAGE = "message";
+    private const string OPTION_ACK_ID = "id";
 
     public SlashCommandProperties CreateProperties()
     {
@@ -38,7 +39,7 @@ public class ReminderCommand(
                 .WithDescription("add a new reminder")
                 .WithType(ApplicationCommandOptionType.SubCommand)
                 .AddOption(new SlashCommandOptionBuilder()
-                    .WithName(OPTION_ADD_MESSAGE)
+                    .WithName(OPTION_ADD_ID)
                     .WithDescription("the id of the job and the message to send")
                     .WithType(ApplicationCommandOptionType.String)
                     .WithRequired(true))
@@ -47,6 +48,11 @@ public class ReminderCommand(
                     .WithDescription("the cronexpression of the job")
                     .WithType(ApplicationCommandOptionType.String)
                     .WithRequired(true))
+                .AddOption(new SlashCommandOptionBuilder()
+                    .WithName(OPTION_ADD_MESSAGE)
+                    .WithDescription("the message to send, if not set, the id will be sent")
+                    .WithType(ApplicationCommandOptionType.String)
+                    .WithRequired(false))
                 .AddOption(new SlashCommandOptionBuilder()
                     .WithName(OPTION_ADD_REMINDERCRON)
                     .WithDescription("the cronexpression of the reminder job")
@@ -57,7 +63,7 @@ public class ReminderCommand(
                 .WithDescription("remove an existing reminder")
                 .WithType(ApplicationCommandOptionType.SubCommand)
                 .AddOption(new SlashCommandOptionBuilder()
-                    .WithName(OPTION_REMOVE_MESSAGE)
+                    .WithName(OPTION_REMOVE_ID)
                     .WithDescription("the id of the job")
                     .WithType(ApplicationCommandOptionType.String)
                     .WithRequired(true)))
@@ -66,7 +72,7 @@ public class ReminderCommand(
                 .WithDescription("acknowledges job, stops reminding")
                 .WithType(ApplicationCommandOptionType.SubCommand)
                 .AddOption(new SlashCommandOptionBuilder()
-                    .WithName(OPTION_ACK_MESSAGE)
+                    .WithName(OPTION_ACK_ID)
                     .WithDescription("the id of the job")
                     .WithType(ApplicationCommandOptionType.String)
                     .WithRequired(true)));
@@ -103,9 +109,10 @@ public class ReminderCommand(
 
     private async Task HandleAdd(SocketSlashCommandDataOption option, SocketSlashCommand arg)
     {
-        var jobName = (string)option.Options.SingleOrDefault(x => x.Name == OPTION_ADD_MESSAGE).Value;
+        var jobName = (string)option.Options.SingleOrDefault(x => x.Name == OPTION_ADD_ID).Value;
         var timing = (string)option.Options.SingleOrDefault(x => x.Name == OPTION_ADD_CRON).Value;
         var reminderTiming = (string?)option.Options.SingleOrDefault(x => x.Name == OPTION_ADD_REMINDERCRON)?.Value;
+        var message = (string?)option.Options.SingleOrDefault(x => x.Name == OPTION_ADD_MESSAGE)?.Value;
 
         using var scope = serviceProvider.CreateAsyncScope();
         using var botDbContext = scope.ServiceProvider.GetRequiredService<BotDbContext>();
@@ -136,6 +143,7 @@ public class ReminderCommand(
             {
                 JobId = jobName,
                 ChannelId = channelId,
+                Message = message,
             })).Entity;
             await botDbContext.SaveChangesAsync();
             RecurringJob.AddOrUpdate(newJob.HangfireJobId, () => PingTask(newJob, reminderTiming), timing);
@@ -164,7 +172,7 @@ public class ReminderCommand(
                 return;
             }
 
-            var message = await messageChannel.SendMessageAsync(text: $"ping {jobData.Message ?? jobData.JobId}");
+            var message = await messageChannel.SendMessageAsync(text: $"[{jobData.JobId}]: {jobData.Message ?? jobData.JobId}");
 
             if (recurringCron?.Length > 0 && job.ReminderJobId is null)
             {
@@ -202,7 +210,7 @@ public class ReminderCommand(
 
     private async Task HandleRemove(SocketSlashCommandDataOption option, SocketSlashCommand arg)
     {
-        var jobId = (string)option.Options.SingleOrDefault(x => x.Name == OPTION_REMOVE_MESSAGE).Value;
+        var jobId = (string)option.Options.SingleOrDefault(x => x.Name == OPTION_REMOVE_ID).Value;
 
         try
         {
@@ -218,7 +226,7 @@ public class ReminderCommand(
             }
 
             RecurringJob.RemoveIfExists(toRemove.HangfireJobId);
-            
+
             botDbContext.JobDataModels.Remove(toRemove);
             await botDbContext.SaveChangesAsync();
 
@@ -232,7 +240,7 @@ public class ReminderCommand(
 
     private async Task HandleAck(SocketSlashCommandDataOption option, SocketSlashCommand arg)
     {
-        var jobId = (string)option.Options.SingleOrDefault(x => x.Name == OPTION_ACK_MESSAGE).Value;
+        var jobId = (string)option.Options.SingleOrDefault(x => x.Name == OPTION_ACK_ID).Value;
 
         try
         {
