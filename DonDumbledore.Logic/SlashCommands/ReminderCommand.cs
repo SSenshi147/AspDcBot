@@ -13,7 +13,7 @@ namespace DonDumbledore.Logic.SlashCommands;
 public class ReminderCommand(
     DiscordSocketClient discordSocketClient,
     ILogger<ReminderCommand> logger,
-    IServiceProvider serviceProvider)// : IDonCommand - WIP
+    IServiceProvider serviceProvider) : IDonCommand
 {
     public string Name => NAME;
 
@@ -112,7 +112,9 @@ public class ReminderCommand(
 
         try
         {
-            if (await botDbContext.JobDataModels.AnyAsync(x => x.JobId == jobName))
+            var channelId = arg.Channel.Id;
+
+            if (await botDbContext.JobDataModels.AnyAsync(x => x.JobId == jobName && x.ChannelId == arg.Channel.Id))
             {
                 await arg.FollowupAsync(text: "job already exists");
                 return;
@@ -120,23 +122,23 @@ public class ReminderCommand(
 
             if (!CronExpression.TryParse(timing, out _))
             {
-                await arg.FollowupAsync(text: "invalid cron");
+                await arg.FollowupAsync(text: $"invalid cron: {nameof(timing)}");
                 return;
             }
 
             if (reminderTiming?.Length > 0 && !CronExpression.TryParse(reminderTiming, out _))
             {
-                await arg.FollowupAsync(text: "invalid cron");
+                await arg.FollowupAsync(text: $"invalid cron: {nameof(reminderTiming)}");
                 return;
             }
 
-            await botDbContext.JobDataModels.AddAsync(new JobData
+            var newJob = (await botDbContext.JobDataModels.AddAsync(new JobData
             {
                 JobId = jobName,
-                UserId = arg.User.Id,
-            });
+                ChannelId = channelId,
+            })).Entity;
             await botDbContext.SaveChangesAsync();
-            RecurringJob.AddOrUpdate(jobName, () => PingTask(jobName, reminderTiming), timing);
+            RecurringJob.AddOrUpdate(newJob.HangfireJobId, () => PingTask(newJob, reminderTiming), timing);
 
             await arg.FollowupAsync(text: "job added");
         }
@@ -146,26 +148,31 @@ public class ReminderCommand(
         }
     }
 
-    public async Task PingTask(string jobName, string? recurringCron = null)
+    public async Task PingTask(JobData jobData, string? recurringCron = null)
     {
         try
         {
             using var scope = serviceProvider.CreateAsyncScope();
             using var botDbContext = scope.ServiceProvider.GetRequiredService<BotDbContext>();
 
-            var job = await botDbContext.JobDataModels.FirstOrDefaultAsync(x => x.JobId == jobName);
-            var user = await discordSocketClient.GetUserAsync(job.UserId);
+            var job = await botDbContext.JobDataModels.FirstOrDefaultAsync(x => x.JobId == jobData.JobId && x.ChannelId == jobData.ChannelId);
+            var channel = await discordSocketClient.GetChannelAsync(job.ChannelId);
 
-            var message = await user.SendMessageAsync(text: $"ping {jobName}");
+            if (channel is not IMessageChannel messageChannel)
+            {
+                logger.LogWarning("channel {channelId} is not IMessageChannel", channel.Id);
+                return;
+            }
+
+            var message = await messageChannel.SendMessageAsync(text: $"ping {jobData.Message ?? jobData.JobId}");
 
             if (recurringCron?.Length > 0 && job.ReminderJobId is null)
             {
-                var reminderJobId = $"{job.JobId}-reminder";
-                job.ReminderJobId = reminderJobId;
+                job.ReminderJobId = job.HangfireReminderJobId;
 
                 try
                 {
-                    RecurringJob.AddOrUpdate(reminderJobId, () => PingTaskReminder(jobName), recurringCron);
+                    RecurringJob.AddOrUpdate(job.HangfireReminderJobId, () => PingTaskReminder(job.HangfireJobId), recurringCron);
                     botDbContext.JobDataModels.Update(job);
                     await botDbContext.SaveChangesAsync();
                 }
@@ -202,7 +209,7 @@ public class ReminderCommand(
             using var scope = serviceProvider.CreateAsyncScope();
             using var botDbContext = scope.ServiceProvider.GetRequiredService<BotDbContext>();
 
-            var toRemove = await botDbContext.JobDataModels.FirstOrDefaultAsync(x => x.JobId == jobId);
+            var toRemove = await botDbContext.JobDataModels.FirstOrDefaultAsync(x => x.JobId == jobId && x.ChannelId == arg.Channel.Id);
 
             if (toRemove is null || toRemove == default)
             {
@@ -210,10 +217,10 @@ public class ReminderCommand(
                 return;
             }
 
+            RecurringJob.RemoveIfExists(toRemove.HangfireJobId);
+            
             botDbContext.JobDataModels.Remove(toRemove);
             await botDbContext.SaveChangesAsync();
-
-            RecurringJob.RemoveIfExists(jobId);
 
             await arg.FollowupAsync(text: "job removed");
         }
@@ -232,7 +239,7 @@ public class ReminderCommand(
             using var scope = serviceProvider.CreateAsyncScope();
             using var botDbContext = scope.ServiceProvider.GetRequiredService<BotDbContext>();
 
-            var toRemove = await botDbContext.JobDataModels.FirstOrDefaultAsync(x => x.JobId == jobId);
+            var toRemove = await botDbContext.JobDataModels.FirstOrDefaultAsync(x => x.JobId == jobId && x.ChannelId == arg.Channel.Id);
 
             if (toRemove is null || toRemove == default)
             {
@@ -240,7 +247,7 @@ public class ReminderCommand(
                 return;
             }
 
-            RecurringJob.RemoveIfExists(toRemove.ReminderJobId);
+            RecurringJob.RemoveIfExists(toRemove.HangfireReminderJobId);
             toRemove.ReminderJobId = null;
             botDbContext.JobDataModels.Update(toRemove);
             await botDbContext.SaveChangesAsync();
