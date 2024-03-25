@@ -1,4 +1,5 @@
 # CI/CD notes
+[linux service config](https://swimburger.net/blog/dotnet/how-to-run-a-dotnet-core-console-app-as-a-service-using-systemd-on-linux)
 ## bottest.service
 ```
 # location: /etc/systemd/system/bottest.service
@@ -15,6 +16,18 @@ Environment=DOTNET_ENVIRONMENT=Development
 
 [Install]
 WantedBy=multi-user.target
+```
+## terminal commands used
+```
+# reload service configs
+sudo systemctl daemon-reload
+
+# enable service start on boot
+sudo systemctl enable bottest
+
+# view logs
+systemctl status bottest
+journalctl -u bottest.service -f
 ```
 ## jenkins job build steps
 ```
