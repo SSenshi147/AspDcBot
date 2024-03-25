@@ -1,6 +1,5 @@
 ﻿using Discord;
 using Discord.WebSocket;
-using DonDumbledore.Logic.Extensions;
 
 namespace DonDumbledore.Logic.Requests;
 
@@ -25,6 +24,6 @@ public class PingCommand : IDonCommand
 
     public async Task Handle(SocketSlashCommand arg)
     {
-        await arg.RespondAsync(text: $"pong {arg.GetDataByName(NAME)}");
+        await arg.RespondAsync(text: $"pong {arg.Data.Options.FirstOrDefault()?.Value}");
     }
 }
