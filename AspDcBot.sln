@@ -3,9 +3,14 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.9.34607.119
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DonDumbledore.Logic", "DonDumbledore.Logic\DonDumbledore.Logic.csproj", "{61EBC50A-11A9-4E83-925E-4B35A74E0ECF}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DonDumbledore.Logic", "DonDumbledore.Logic\DonDumbledore.Logic.csproj", "{61EBC50A-11A9-4E83-925E-4B35A74E0ECF}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DonDumbledore.ConsoleHost", "DonDumbledore.ConsoleHost\DonDumbledore.ConsoleHost.csproj", "{8F361553-A805-4009-93B6-196B465AB6AD}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DonDumbledore.ConsoleHost", "DonDumbledore.ConsoleHost\DonDumbledore.ConsoleHost.csproj", "{8F361553-A805-4009-93B6-196B465AB6AD}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{7D8DA6FF-A7E3-4662-92DD-FCE15E44F2EB}"
+	ProjectSection(SolutionItems) = preProject
+		README.md = README.md
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
