@@ -1,3 +1,5 @@
+# Slash commands
+
 # CI/CD notes
 [linux service config](https://swimburger.net/blog/dotnet/how-to-run-a-dotnet-core-console-app-as-a-service-using-systemd-on-linux)
 ## bottest.service
@@ -28,6 +30,13 @@ sudo systemctl enable bottest
 # view logs
 systemctl status bottest
 journalctl -u bottest.service -f
+```
+## jenkins sudo user
+```
+sudo visudo
+
+# append:
+jenkins ALL=(ALL) NOPASSWD: ALL
 ```
 ## jenkins job build steps
 ```
