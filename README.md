@@ -40,8 +40,8 @@ jenkins ALL=(ALL) NOPASSWD: ALL
 ```
 ## jenkins job build steps
 ```
+sudo dotnet build DonDumbledore.ConsoleHost/DonDumbledore.ConsoleHost.csproj /p:PublishProfile=DonDumbledore.ConsoleHost/Properties/PublishProfiles/LinuxX64.pubxml
 sudo systemctl stop bottest
-sudo dotnet clean
-sudo dotnet build DonDumbledore.ConsoleHost/DonDumbledore.ConsoleHost.csproj /p:PublishProfile=DonDumbledore.ConsoleHost/Properties/PublishProfiles/LinuxX64.pubxml -o /home/marci/test/linux-x64
+sudo dotnet publish DonDumbledore.ConsoleHost/DonDumbledore.ConsoleHost.csproj /p:PublishProfile=DonDumbledore.ConsoleHost/Properties/PublishProfiles/LinuxX64.pubxml -o /home/marci/test/linux-x64
 sudo systemctl start bottest
 ```
