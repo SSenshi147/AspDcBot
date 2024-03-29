@@ -133,7 +133,7 @@ public class ReminderCommand(
         try
         {
             BackgroundJob.Schedule(() => OneTimeReminder(arg.Channel.Id, message), dateTime);
-            await arg.FollowupAsync(text: $"added for {dateTime}");
+            await arg.FollowupAsync(text: $"added for {dateTime.ToString("yyyy.MM.dd HH:mm:ss")}");
         }
         catch (Exception ex)
         {
