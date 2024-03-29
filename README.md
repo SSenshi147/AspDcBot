@@ -2,6 +2,12 @@
 
 # CI/CD notes
 [linux service config](https://swimburger.net/blog/dotnet/how-to-run-a-dotnet-core-console-app-as-a-service-using-systemd-on-linux)
+## ubuntu install
+```
+sudo apt install default-jre
+sudo apt install dotnet-sdk-8.0
+sudo apt install git
+```
 ## bottest.service
 ```
 # location: /etc/systemd/system/bottest.service
