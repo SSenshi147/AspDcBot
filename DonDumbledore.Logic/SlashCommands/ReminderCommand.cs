@@ -28,6 +28,9 @@ public class ReminderCommand(
     private const string OPTION_REMOVE_ID = "id";
     private const string OPTION_ACK = "ack";
     private const string OPTION_ACK_ID = "id";
+    private const string OPTION_ONETIME = "onetime";
+    private const string OPTION_ONETIME_DATETIME = "datetime";
+    private const string OPTION_ONETIME_MESSAGE = "message";
 
     public SlashCommandProperties CreateProperties()
     {
@@ -75,7 +78,13 @@ public class ReminderCommand(
                     .WithName(OPTION_ACK_ID)
                     .WithDescription("the id of the job")
                     .WithType(ApplicationCommandOptionType.String)
-                    .WithRequired(true)));
+                    .WithRequired(true)))
+            .AddOption(new SlashCommandOptionBuilder()
+                .WithName(OPTION_ONETIME)
+                .WithDescription("adds a one-time reminder")
+                .WithType(ApplicationCommandOptionType.SubCommand)
+                .AddOption(OPTION_ONETIME_DATETIME, ApplicationCommandOptionType.String, "the ISO datetime of the reminer", isRequired: true)
+                .AddOption(OPTION_ONETIME_MESSAGE, ApplicationCommandOptionType.String, "the message to send", isRequired: true));
 
         return builer.Build();
     }
@@ -98,6 +107,9 @@ public class ReminderCommand(
                 case OPTION_ACK:
                     await HandleAck(subcommand, arg);
                     break;
+                case OPTION_ONETIME:
+                    await HandleOneTime(subcommand, arg);
+                    break;
                 default: break;
             }
         }
@@ -105,6 +117,40 @@ public class ReminderCommand(
         {
             logger.LogError(ex, "miafaszvan");
         }
+    }
+
+    private async Task HandleOneTime(SocketSlashCommandDataOption option, SocketSlashCommand arg)
+    {
+        var timing = (string)option.Options.SingleOrDefault(x => x.Name == OPTION_ONETIME_DATETIME).Value;
+        var message = (string)option.Options.SingleOrDefault(x => x.Name == OPTION_ONETIME_MESSAGE).Value;
+
+        if (!DateTime.TryParse(timing, out var dateTime))
+        {
+            await arg.FollowupAsync(text: "invalid timing, provide valid ISO format");
+            return;
+        }
+
+        try
+        {
+            BackgroundJob.Schedule(() => OneTimeReminder(arg.Channel.Id, message), dateTime);
+            await arg.FollowupAsync(text: $"added for {dateTime}");
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "error while adding one-time reminder");
+        }
+    }
+
+    public async Task OneTimeReminder(ulong channelId, string message)
+    {
+        var channel = await discordSocketClient.GetChannelAsync(channelId);
+        if (channel is not IMessageChannel messageChannel)
+        {
+            logger.LogWarning("channel {channelId} is not IMessageChannel", channel.Id);
+            return;
+        }
+
+        await messageChannel.SendMessageAsync(text: message);
     }
 
     private async Task HandleAdd(SocketSlashCommandDataOption option, SocketSlashCommand arg)

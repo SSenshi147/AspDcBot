@@ -138,21 +138,21 @@ public class DiscordBotService(
             logger.LogInformation("deleted global command: {command}", command.Name);
         }
 
-        //var services = serviceProvider.GetServices<IDonCommand>();
-        //foreach (var service in services)
-        //{
-        //    try
-        //    {
-        //        var command = service.CreateProperties();
-        //        await client.CreateGlobalApplicationCommandAsync(command);
+        var services = serviceProvider.GetServices<IDonCommand>();
+        foreach (var service in services)
+        {
+            try
+            {
+                var command = service.CreateProperties();
+                await client.CreateGlobalApplicationCommandAsync(command);
 
-        //        logger.LogInformation("global command: {commandName} registered", command.Name);
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        logger.LogError(ex, "error while registering global command: {commandName}", service.Name);
-        //    }
-        //}
+                logger.LogInformation("global command: {commandName} registered", command.Name);
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "error while registering global command: {commandName}", service.Name);
+            }
+        }
     }
 
     private async Task RegisterInterfaceCommands(SocketGuild guild)

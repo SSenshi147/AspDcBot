@@ -365,3 +365,6 @@ FodyWeavers.xsd
 /AspDcBot/appsettings.Development.json
 /ConsoleHost/appsettings.Development.json
 /DonDumbledore.ConsoleHost/appsettings.Development.json
+
+# Rider
+.idea/
