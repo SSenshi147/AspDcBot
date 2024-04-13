@@ -111,74 +111,94 @@ public class DiscordBotService(
 
     private async Task Client_Connected()
     {
-        // TODO: configból allowed servereket kiszedni
-        // TODO: csak akkor regelni a commandot, ha nincs még regelve
-        await ClearGlobalCommands();
-
-        var guilds = client.Guilds;
-
-        await Parallel.ForEachAsync(guilds, async (guild, _) =>
-        {
-            await RegisterInterfaceCommands(guild);
-        });
-    }
-    
-    private async Task ClearGlobalCommands()
-    {
-        if (!_config.DeleteAndReRegisterGlobalCommands)
-        {
-            return;
-        }
-
-        var commands = await client.GetGlobalApplicationCommandsAsync();
-
-        foreach (var command in commands)
-        {
-            await command.DeleteAsync();
-            logger.LogInformation("deleted global command: {command}", command.Name);
-        }
-
-        var services = serviceProvider.GetServices<IDonCommand>();
-        foreach (var service in services)
-        {
-            try
-            {
-                var command = service.CreateProperties();
-                await client.CreateGlobalApplicationCommandAsync(command);
-
-                logger.LogInformation("global command: {commandName} registered", command.Name);
-            }
-            catch (Exception ex)
-            {
-                logger.LogError(ex, "error while registering global command: {commandName}", service.Name);
-            }
-        }
+         await RegisterCommandsAsync();
     }
 
-    private async Task RegisterInterfaceCommands(SocketGuild guild)
+    private async Task RegisterCommandsAsync()
     {
-        if (!_config.DeleteAndReRegisterGuildCommands)
+        logger.LogInformation("isProduction: {isProd}, registerNewCommands: {regNew}", _config.IsProductionEnvironment, _config.RegisterNewCommands);
+
+        if (_config.IsProductionEnvironment)
         {
-            return;
+            await ClearGuildCommandsAsync();
+            
+            if (_config.RegisterNewCommands)
+            {
+                await ClearGlobalCommandsAsync();
+                await RegisterGlobalCommandsAsync();
+            }
+        }
+        else
+        {
+            await ClearGlobalCommandsAsync();
+            await ClearGuildCommandsAsync();
+            await RegisterGuildCommandsAsync();
         }
 
-        await guild.DeleteApplicationCommandsAsync();
-        logger.LogInformation("deleted guild commands, guild: {guildId}", guild.Id);
 
-        var services = serviceProvider.GetServices<IDonCommand>();
-        foreach (var service in services)
+        async Task ClearGlobalCommandsAsync()
         {
-            try
-            {
-                var command = service.CreateProperties();
-                await guild.CreateApplicationCommandAsync(command);
+            var commands = await client.GetGlobalApplicationCommandsAsync();
 
-                logger.LogInformation("guild command: {commandName} registered", command.Name);
-            }
-            catch (Exception ex)
+            foreach (var command in commands)
             {
-                logger.LogError(ex, "error while registering guild command: {commandName}", service.Name);
+                await command.DeleteAsync();
+                logger.LogInformation("deleted global command: {command}", command.Name);
             }
+        }
+
+        async Task RegisterGlobalCommandsAsync()
+        {
+            var services = serviceProvider.GetServices<IDonCommand>();
+            foreach (var service in services)
+            {
+                try
+                {
+                    var command = service.CreateProperties();
+                    await client.CreateGlobalApplicationCommandAsync(command);
+
+                    logger.LogInformation("global command: {commandName} registered", command.Name);
+                }
+                catch (Exception ex)
+                {
+                    logger.LogError(ex, "error while registering global command: {commandName}", service.Name);
+                }
+            }
+        }
+
+        async Task ClearGuildCommandsAsync()
+        {
+            var guilds = client.Guilds;
+
+            await Parallel.ForEachAsync(guilds, async (guild, _) =>
+            {
+                await guild.DeleteApplicationCommandsAsync();
+                logger.LogInformation("deleted guild commands, guild: {guildId}", guild.Id);
+            });
+        }
+
+        async Task RegisterGuildCommandsAsync()
+        {
+            var guilds = client.Guilds;
+
+            await Parallel.ForEachAsync(guilds, async (guild, _) =>
+            {
+                var services = serviceProvider.GetServices<IDonCommand>();
+                foreach (var service in services)
+                {
+                    try
+                    {
+                        var command = service.CreateProperties();
+                        await guild.CreateApplicationCommandAsync(command);
+
+                        logger.LogInformation("guild command: {commandName} registered", command.Name);
+                    }
+                    catch (Exception ex)
+                    {
+                        logger.LogError(ex, "error while registering guild command: {commandName}", service.Name);
+                    }
+                }
+            });
         }
     }
 

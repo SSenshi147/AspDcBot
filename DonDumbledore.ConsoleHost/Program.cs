@@ -17,7 +17,7 @@ namespace DonDumbledore.ConsoleHost;
 
 internal class Program
 {
-    private static void Main()
+    private static void Main(params string[] objects)
     {
         const string dbConnectionStringKey = "SqliteConnectionString";
         const string hangfireDbConnectionStringKey = "HangfireSqliteConnectionString";
@@ -27,10 +27,17 @@ internal class Program
         var connectionString = builder.Configuration[dbConnectionStringKey];
         var hangfireConnectionString = builder.Configuration[hangfireDbConnectionStringKey];
 
-        var envName = builder.Environment.ApplicationName;
-        var isDev = builder.Environment.IsDevelopment(); // DOTNET_ENVIRONMENT = Development variable
-
+        bool registerNewCommands = false;
+        if (objects is not null && objects.Length > 0)
+        {
+            registerNewCommands = bool.TryParse(objects[0], out var result) && result;
+        }
         builder.Services.Configure<DonDumbledoreConfig>(builder.Configuration);
+        builder.Services.PostConfigure<DonDumbledoreConfig>(config =>
+        {
+            config.IsProductionEnvironment = builder.Environment.IsProduction();
+            config.RegisterNewCommands = registerNewCommands;
+        });
 
         builder.Services.AddHangfire(config =>
         {
