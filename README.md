@@ -12,15 +12,16 @@ sudo apt install git
 ```
 # location: /etc/systemd/system/bottest.service
 [Unit]
-Description=Foo Bar Service
+Description=DonDumbledore - PROD
 [Service]
-WorkingDirectory=/home/marci/test/linux-x64
-ExecStart=/home/marci/test/linux-x64/DonDumbledore.ConsoleHost
+WorkingDirectory=/home/marci/prod/linux-x64
+ExecStart=/home/marci/prod/linux-x64/DonDumbledore.ConsoleHost $SCRIPT_ARGS
 Restart=always
 RestartSec=10
 SyslogIdentifier=DonDumbledore
 User=marci
-Environment=DOTNET_ENVIRONMENT=Development
+Environment=DOTNET_ENVIRONMENT=Production
+Environment="SCRIPT_ARGS=%I"
 
 [Install]
 WantedBy=multi-user.target
@@ -50,9 +51,9 @@ jenkins ALL=(ALL) NOPASSWD: ALL
 ## jenkins job build steps
 ```
 sudo dotnet build DonDumbledore.ConsoleHost/DonDumbledore.ConsoleHost.csproj /p:PublishProfile=DonDumbledore.ConsoleHost/Properties/PublishProfiles/LinuxX64.pubxml
-sudo systemctl stop bottest
-sudo dotnet publish DonDumbledore.ConsoleHost/DonDumbledore.ConsoleHost.csproj /p:PublishProfile=DonDumbledore.ConsoleHost/Properties/PublishProfiles/LinuxX64.pubxml -o /home/marci/test/linux-x64
-sudo systemctl start bottest
+sudo systemctl stop dondumbledore-prod@"*".service
+sudo dotnet publish DonDumbledore.ConsoleHost/DonDumbledore.ConsoleHost.csproj /p:PublishProfile=DonDumbledore.ConsoleHost/Properties/PublishProfiles/LinuxX64.pubxml -o /home/marci/prod/linux-x64
+sudo systemctl start dondumbledore-prod@"${regNew}".service
 ```
 ## jenkins
 [select branches](https://www.baeldung.com/ops/jenkins-git-branch-selection)
