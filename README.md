@@ -36,6 +36,9 @@ sudo systemctl enable bottest
 # view logs
 systemctl status bottest
 journalctl -u bottest.service -f
+
+https://superuser.com/questions/728951/systemd-giving-my-service-multiple-arguments
+https://askubuntu.com/questions/1077778/how-do-i-pass-flags-when-starting-a-systemd-service
 ```
 ## jenkins sudo user
 ```
@@ -51,3 +54,12 @@ sudo systemctl stop bottest
 sudo dotnet publish DonDumbledore.ConsoleHost/DonDumbledore.ConsoleHost.csproj /p:PublishProfile=DonDumbledore.ConsoleHost/Properties/PublishProfiles/LinuxX64.pubxml -o /home/marci/test/linux-x64
 sudo systemctl start bottest
 ```
+## jenkins
+[select branches](https://www.baeldung.com/ops/jenkins-git-branch-selection)
+active choices plugin
+active choices reactive job parameter
+```
+def gitUrl = "https://github.com/SSenshi147/AspDcBot.git"
+def gitBranches = "git ls-remote --heads ${gitUrl}".execute().text.readLines().collect { it.split()[1].replaceAll("refs/heads/", "") }.sort().reverse()
+```
+name it branch, add itt as `${branch}` to job setting "build branches"
