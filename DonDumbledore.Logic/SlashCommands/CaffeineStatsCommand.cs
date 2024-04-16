@@ -12,7 +12,8 @@ public class CaffeineStatsCommand(IServiceProvider serviceProvider) : IDonComman
     public string Name => NAME;
 
     private const string NAME = "stats";
-    private const string DESCRIPTION = "A személyes drogozási szokásaid";
+    private const string DESCRIPTION = "A személyes drogozási szokásaid vagy a bölcsek anyaga";
+    private const string VALUE_OPTION = "üzenet";
 
     public SlashCommandProperties CreateProperties()
     {
@@ -20,7 +21,7 @@ public class CaffeineStatsCommand(IServiceProvider serviceProvider) : IDonComman
 
         builder.WithName(NAME);
         builder.WithDescription(DESCRIPTION);
-
+        builder.AddOption(VALUE_OPTION, ApplicationCommandOptionType.String, "üzenet", isRequired: false);
         return builder.Build();
     }
 
@@ -29,29 +30,60 @@ public class CaffeineStatsCommand(IServiceProvider serviceProvider) : IDonComman
         using var scope = serviceProvider.CreateAsyncScope();
         using var botDbContext = scope.ServiceProvider.GetRequiredService<BotDbContext>();
 
-        var count = botDbContext.DrinkModels.Count(x => x.UserId == arg.User.Id);
-        var latests = await botDbContext
-            .DrinkModels
-            .Where(x => x.UserId == arg.User.Id)
-            .OrderByDescending(x => x.CreatedAt)
-            .Take(3)
-            .Select(x => new
-            {
-                x.CreatedAt,
-                x.Caffeine
-            })
-            .ToListAsync();
 
-        var sb = new StringBuilder();
-        sb.AppendLine("Legutóbbi 3 drogozása a kisfiúnak:");
-
-        foreach (var latest in latests)
+        if (arg.Data.Options.Count() == 0)
         {
-            sb.AppendLine($"{latest.CreatedAt.ToString("yyyy-MM-dd @ HH:mm")} - {latest.Caffeine.ToString()}");
+            var count = botDbContext.DrinkModels.Count(x => x.UserId == arg.User.Id);
+            var latests = await botDbContext
+                .DrinkModels
+                .Where(x => x.UserId == arg.User.Id)
+                .OrderByDescending(x => x.CreatedAt)
+                .Take(3)
+                .Select(x => new
+                {
+                    x.CreatedAt,
+                    x.Caffeine
+                })
+                .ToListAsync();
+
+            var sb = new StringBuilder();
+            sb.AppendLine("Legutóbbi 3 drogozása a kisfiúnak:");
+
+            foreach (var latest in latests)
+            {
+                sb.AppendLine($"{latest.CreatedAt.ToString("yyyy-MM-dd @ HH:mm")} - {latest.Caffeine.ToString()}");
+            }
+
+            sb.AppendLine($"Összesen {count} alkalommal drogoztál, de a Don még nem adott golyót");
+
+            await arg.RespondAsync(sb.ToString());
         }
+        else
+        {
+            var param = (string?)arg.Data.Options.FirstOrDefault().Value;
+            var count = botDbContext.MessageModels.Count(x => x.UserId == arg.User.Id && x.MessageValue.Equals(param));
+            var latests = await botDbContext
+                .TrackedMessageModels
+                .Where(x => x.UserId == arg.User.Id)
+                .OrderByDescending(x => x.CreatedAt)
+                .Take(3)
+                .Select(x => new
+                {
+                    x.CreatedAt
+                })
+                .ToListAsync();
 
-        sb.AppendLine($"Összesen {count} alkalommal drogoztál, de a Don még nem adott golyót");
+            var sb = new StringBuilder();
+            sb.AppendLine("Legutóbbi 3 beszólása a kisfiúnak:");
 
-        await arg.RespondAsync(sb.ToString());
+            foreach (var latest in latests)
+            {
+                sb.AppendLine($"{latest.CreatedAt.ToString("yyyy-MM-dd @ HH:mm")} - {param}");
+            }
+
+            sb.AppendLine($"Összesen {count} alkalommal szólottál ilyet \"{param}\", de a Don még nem adott golyót");
+
+            await arg.RespondAsync(sb.ToString());
+        }
     }
 }

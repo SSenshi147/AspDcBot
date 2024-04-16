@@ -13,6 +13,7 @@ public class ToplistCommand(IServiceProvider serviceProvider) : IDonCommand
 
     private const string NAME = "toplist";
     private const string DESCRIPTION = "Az intézet bentlakóinak statisztikája";
+    private const string VALUE_OPTION = "üzenet";
 
     public SlashCommandProperties CreateProperties()
     {
@@ -21,6 +22,7 @@ public class ToplistCommand(IServiceProvider serviceProvider) : IDonCommand
         builder.WithName(NAME);
         builder.WithDescription(DESCRIPTION);
 
+        builder.AddOption(VALUE_OPTION, ApplicationCommandOptionType.String, "üzenet", isRequired: true);
         return builder.Build();
     }
 
@@ -29,7 +31,9 @@ public class ToplistCommand(IServiceProvider serviceProvider) : IDonCommand
         using var scope = serviceProvider.CreateAsyncScope();
         using var botDbContext = scope.ServiceProvider.GetRequiredService<BotDbContext>();
 
-        var result = await botDbContext
+        if (arg.Data.Options.Count() == 0)
+        {
+            var result = await botDbContext
             .DrinkModels
             .GroupBy(x => x.UserId, (userId, models) => new
             {
@@ -44,13 +48,42 @@ public class ToplistCommand(IServiceProvider serviceProvider) : IDonCommand
             .OrderByDescending(x => x.Count)
             .ToListAsync();
 
-        var sb = new StringBuilder(result.Count);
-        for (var i = 0; i < result.Count; i++)
-        {
-            var item = result[i];
-            sb.AppendLine($"{i + 1}. {item.Mention} - {item.Count} drogozási alkalom");
-        }
+            var sb = new StringBuilder(result.Count);
+            for (var i = 0; i < result.Count; i++)
+            {
+                var item = result[i];
+                sb.AppendLine($"{i + 1}. {item.Mention} - {item.Count} drogozási alkalom");
+            }
 
-        await arg.RespondAsync(sb.ToString());
+            await arg.RespondAsync(sb.ToString());
+        }
+        else
+        {
+            var message = (string?)arg.Data.Options.FirstOrDefault().Value;
+            var result = await botDbContext
+           .MessageModels
+           .Where(x => x.MessageValue.Equals(message))
+           .GroupBy(x => x.UserId, (userId, models) => new
+           {
+               User = userId,
+               Count = models.Count()
+           })
+           .Join(botDbContext.UserDataModels, arg => arg.User, data => data.UserId, (arg1, data) => new
+           {
+               data.Mention,
+               arg1.Count
+           })
+           .OrderByDescending(x => x.Count)
+           .ToListAsync();
+
+            var sb = new StringBuilder(result.Count);
+            for (var i = 0; i < result.Count; i++)
+            {
+                var item = result[i];
+                sb.AppendLine($"{i + 1}. {item.Mention} - {item.Count} beszólási alkalom evvel: {message}");
+            }
+
+            await arg.RespondAsync(sb.ToString());
+        }
     }
 }
