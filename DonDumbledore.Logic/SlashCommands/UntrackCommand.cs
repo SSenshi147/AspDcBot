@@ -38,13 +38,14 @@ namespace DonDumbledore.Logic.SlashCommands
 
             var model = await botDbContext.TrackedMessageModels.FirstOrDefaultAsync(x => x.MessageValue.Equals(trackMessage));
 
-            if (model == null)
+            if (model is null)
             {
                 await arg.RespondAsync("Ezt eddig is leszartam, kisfiam.");
+                return;
             }
 
             botDbContext.Remove(model);
-            botDbContext.SaveChanges();
+            await botDbContext.SaveChangesAsync();
 
             await arg.RespondAsync($"Jólvan, Lőrinc fiú leszarja a \"{trackMessage}\" üzeneteket.");
         }
