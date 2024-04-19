@@ -12,6 +12,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using System.Reflection;
+using Microsoft.Extensions.Logging;
 
 namespace DonDumbledore.ConsoleHost;
 
@@ -57,7 +58,26 @@ internal class Program
         builder.Services.RegisterCommands();
         builder.Services.AddHostedService<DiscordBotService>();
 
-        builder.Build().Run();
+        var host = builder.Build();
+
+        using var scope = host.Services.CreateScope();
+        using var context = scope.ServiceProvider.GetRequiredService<BotDbContext>();
+        if (context.Database.GetPendingMigrations().Any())
+        {
+            var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
+            try
+            {
+                logger.LogInformation("trying to auto apply migrations");
+                context.Database.Migrate();
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "error while auto applying migrations, quitting");
+                return;
+            }
+        }
+
+        host.Run();
 
         Console.WriteLine("Press ENTER to exit");
         Console.ReadLine();
