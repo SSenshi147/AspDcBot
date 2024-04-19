@@ -121,8 +121,7 @@ public class DiscordBotService(
 
             if (_config.RegisterNewCommands)
             {
-                await ClearGlobalCommandsAsync();
-                await RegisterGlobalCommandsAsync();
+                await BulkOverwriteGlobalCommandsAsync();
             }
         }
         else
@@ -131,6 +130,7 @@ public class DiscordBotService(
             await BulkOverwriteGuildCommandsAsync();
         }
 
+        return;
 
         async Task BulkOverwriteGuildCommandsAsync()
         {
@@ -151,6 +151,21 @@ public class DiscordBotService(
             });
         }
 
+        async Task BulkOverwriteGlobalCommandsAsync()
+        {
+            var services = serviceProvider.GetServices<IDonCommand>().ToList();
+            var commandProperties = services.Select(x => x.CreateProperties()).ToArray();
+            try
+            {
+                await client.BulkOverwriteGlobalApplicationCommandsAsync(commandProperties);
+                logger.LogInformation("registered global commands");
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "error while bulk registering global commands");
+            }
+        }
+
         async Task ClearGlobalCommandsAsync()
         {
             var commands = await client.GetGlobalApplicationCommandsAsync();
@@ -162,25 +177,6 @@ public class DiscordBotService(
             }
         }
 
-        async Task RegisterGlobalCommandsAsync()
-        {
-            var services = serviceProvider.GetServices<IDonCommand>();
-            foreach (var service in services)
-            {
-                try
-                {
-                    var command = service.CreateProperties();
-                    await client.CreateGlobalApplicationCommandAsync(command);
-
-                    logger.LogInformation("global command: {commandName} registered", command.Name);
-                }
-                catch (Exception ex)
-                {
-                    logger.LogError(ex, "error while registering global command: {commandName}", service.Name);
-                }
-            }
-        }
-
         async Task ClearGuildCommandsAsync()
         {
             var guilds = client.Guilds;
@@ -189,30 +185,6 @@ public class DiscordBotService(
             {
                 await guild.DeleteApplicationCommandsAsync();
                 logger.LogInformation("deleted guild commands, guild: {guildId}", guild.Id);
-            });
-        }
-
-        async Task RegisterGuildCommandsAsync()
-        {
-            var guilds = client.Guilds;
-            var services = serviceProvider.GetServices<IDonCommand>();
-
-            await Parallel.ForEachAsync(guilds, async (guild, _) =>
-            {
-                foreach (var service in services)
-                {
-                    try
-                    {
-                        var command = service.CreateProperties();
-                        await guild.CreateApplicationCommandAsync(command);
-
-                        logger.LogInformation("guild command: {commandName} registered", command.Name);
-                    }
-                    catch (Exception ex)
-                    {
-                        logger.LogError(ex, "error while registering guild command: {commandName}", service.Name);
-                    }
-                }
             });
         }
     }
