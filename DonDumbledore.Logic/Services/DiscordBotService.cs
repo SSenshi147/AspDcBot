@@ -113,22 +113,8 @@ public class DiscordBotService(
 
     private async Task RegisterCommandsAsync()
     {
-        logger.LogInformation("isProduction: {isProd}, registerNewCommands: {regNew}", _config.IsProductionEnvironment, _config.RegisterNewCommands);
-
-        if (_config.IsProductionEnvironment)
-        {
-            await ClearGuildCommandsAsync();
-
-            if (_config.RegisterNewCommands)
-            {
-                await BulkOverwriteGlobalCommandsAsync();
-            }
-        }
-        else
-        {
-            await ClearGlobalCommandsAsync();
-            await BulkOverwriteGuildCommandsAsync();
-        }
+        await ClearGlobalCommandsAsync();
+        await BulkOverwriteGuildCommandsAsync();
 
         return;
 
