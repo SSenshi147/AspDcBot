@@ -2,6 +2,7 @@
 using Discord.WebSocket;
 using DonDumbledore.Logic.Data;
 using DonDumbledore.Logic.Requests;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace DonDumbledore.Logic.SlashCommands;
@@ -30,11 +31,12 @@ public class PurgeCommand(IServiceProvider serviceProvider) : IDonCommand
 
         var purgeMessage = (string?)arg.Data.Options.FirstOrDefault().Value;
 
-        var model = botDbContext.MessageModels.Where(x => x.MessageValue.Equals(purgeMessage)).ToList();
+        var model = await botDbContext.MessageModels.Where(x => x.MessageValue.Equals(purgeMessage)).ToListAsync();
 
         if (model.Count == 0)
         {
             await arg.RespondAsync("Mit akarsz kitörölni rózsabogaram?");
+            return;
         }
 
         botDbContext.MessageModels.RemoveRange(model);

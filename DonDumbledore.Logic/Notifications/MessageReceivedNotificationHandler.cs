@@ -61,7 +61,7 @@ public class MessageReceivedNotificationHandler(
 
             await arg.AddReactionAsync(OkEmote.Instance);
         }
-        else if (message != null)
+        else if (message is not null)
         {
             if (!await botDbContext.UserDataModels.AnyAsync(x => x.UserId == arg.Author.Id, cancellationToken))
             {

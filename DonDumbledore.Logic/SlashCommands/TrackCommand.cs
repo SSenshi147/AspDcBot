@@ -36,6 +36,7 @@ public class TrackCommand(IServiceProvider serviceProvider) : IDonCommand
         if (model is not null)
         {
             await arg.RespondAsync("Golyót akarsz? Ezt már figyelem.");
+            return;
         }
 
         model = new TrackedMessage { MessageValue = trackMessage };
