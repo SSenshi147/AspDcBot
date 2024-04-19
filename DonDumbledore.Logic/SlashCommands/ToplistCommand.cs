@@ -22,7 +22,7 @@ public class ToplistCommand(IServiceProvider serviceProvider) : IDonCommand
         builder.WithName(NAME);
         builder.WithDescription(DESCRIPTION);
 
-        builder.AddOption(VALUE_OPTION, ApplicationCommandOptionType.String, "üzenet", isRequired: true);
+        builder.AddOption(VALUE_OPTION, ApplicationCommandOptionType.String, "üzenet", isRequired: false);
         return builder.Build();
     }
 

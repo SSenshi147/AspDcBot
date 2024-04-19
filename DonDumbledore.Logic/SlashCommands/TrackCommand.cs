@@ -13,6 +13,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Xml.Linq;
+using Microsoft.VisualBasic.CompilerServices;
 
 namespace DonDumbledore.Logic.SlashCommands
 {
@@ -40,9 +41,9 @@ namespace DonDumbledore.Logic.SlashCommands
 
             var trackMessage = (string?)arg.Data.Options.FirstOrDefault().Value;
 
-            var model =  await botDbContext.TrackedMessageModels.FirstOrDefaultAsync(x => x.MessageValue.Equals(trackMessage));
+            var model = await botDbContext.TrackedMessageModels.FirstOrDefaultAsync(x => x.MessageValue.Equals(trackMessage));
 
-            if(model != null)
+            if (model is not null)
             {
 
                 await arg.RespondAsync("Golyót akarsz? Ezt már figyelem.");

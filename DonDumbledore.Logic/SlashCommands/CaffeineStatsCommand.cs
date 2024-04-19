@@ -27,13 +27,13 @@ public class CaffeineStatsCommand(IServiceProvider serviceProvider) : IDonComman
 
     public async Task Handle(SocketSlashCommand arg)
     {
-        using var scope = serviceProvider.CreateAsyncScope();
-        using var botDbContext = scope.ServiceProvider.GetRequiredService<BotDbContext>();
+        await using var scope = serviceProvider.CreateAsyncScope();
+        await using var botDbContext = scope.ServiceProvider.GetRequiredService<BotDbContext>();
 
 
         if (arg.Data.Options.Count() == 0)
         {
-            var count = botDbContext.DrinkModels.Count(x => x.UserId == arg.User.Id);
+            var count = await botDbContext.DrinkModels.CountAsync(x => x.UserId == arg.User.Id);
             var latests = await botDbContext
                 .DrinkModels
                 .Where(x => x.UserId == arg.User.Id)
@@ -61,10 +61,10 @@ public class CaffeineStatsCommand(IServiceProvider serviceProvider) : IDonComman
         else
         {
             var param = (string?)arg.Data.Options.FirstOrDefault().Value;
-            var count = botDbContext.MessageModels.Count(x => x.UserId == arg.User.Id && x.MessageValue.Equals(param));
+            var count = await botDbContext.MessageModels.CountAsync(x => x.UserId == arg.User.Id && x.MessageValue.Equals(param));
             var latests = await botDbContext
-                .TrackedMessageModels
-                .Where(x => x.UserId == arg.User.Id)
+                .MessageModels
+                .Where(x => x.UserId == arg.User.Id && x.MessageValue.Equals(param))
                 .OrderByDescending(x => x.CreatedAt)
                 .Take(3)
                 .Select(x => new
