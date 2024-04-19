@@ -16,36 +16,32 @@ public class MessageReceivedNotificationHandler(
     private readonly string[] coffees = [tatakaeve, coffee];
     private readonly string[] drinks = [tatakaeve, coffee, tea];
     private readonly string[] teas = [tea];
-    
+
     public async Task Handle(MessageReceivedNotification notification, CancellationToken cancellationToken)
     {
         var arg = notification.SocketMessage;
 
-        if (arg.Author.IsBot) return;
+        if (arg.Author.IsBot)
+        {
+            return;
+        }
 
-        if (!drinks.Contains(arg.CleanContent)) return;
+        if (!drinks.Contains(arg.CleanContent))
+        {
+            return;
+        }
 
         using var scope = serviceProvider.CreateAsyncScope();
         using var botDbContext = scope.ServiceProvider.GetRequiredService<BotDbContext>();
 
         if (!await botDbContext.UserDataModels.AnyAsync(x => x.UserId == arg.Author.Id, cancellationToken))
         {
-            var userModel = new UserData
-            {
-                UserId = arg.Author.Id,
-                Mention = arg.Author.Mention,
-                UserName = arg.Author.Username
-            };
+            var userModel = new UserData { UserId = arg.Author.Id, Mention = arg.Author.Mention, UserName = arg.Author.Username };
 
             await botDbContext.UserDataModels.AddAsync(userModel, cancellationToken);
         }
 
-        var model = new DrinkModel
-        {
-            MessageId = arg.Id,
-            TextChannelId = arg.Channel.Id,
-            UserId = arg.Author.Id
-        };
+        var model = new DrinkModel { MessageId = arg.Id, TextChannelId = arg.Channel.Id, UserId = arg.Author.Id };
 
         if (coffees.Contains(arg.CleanContent))
         {

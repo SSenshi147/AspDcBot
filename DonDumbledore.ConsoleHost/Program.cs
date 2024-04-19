@@ -11,8 +11,8 @@ using Hangfire.Storage.SQLite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using System.Reflection;
 using Microsoft.Extensions.Logging;
+using System.Reflection;
 
 namespace DonDumbledore.ConsoleHost;
 
@@ -28,11 +28,12 @@ internal class Program
         var connectionString = builder.Configuration[dbConnectionStringKey];
         var hangfireConnectionString = builder.Configuration[hangfireDbConnectionStringKey];
 
-        bool registerNewCommands = false;
+        var registerNewCommands = false;
         if (objects is not null && objects.Length > 0)
         {
             registerNewCommands = bool.TryParse(objects[0], out var result) && result;
         }
+
         builder.Services.Configure<DonDumbledoreConfig>(builder.Configuration);
         builder.Services.PostConfigure<DonDumbledoreConfig>(config =>
         {
@@ -51,10 +52,7 @@ internal class Program
             x => x.MigrationsAssembly(Assembly.GetAssembly(typeof(BotDbContext))!.FullName)));
         builder.Services.AddMediatR(config => config.RegisterServicesFromAssemblyContaining<PingCommand>());
         builder.Services.AddSingleton<InteractionService>();
-        builder.Services.AddSingleton<DiscordSocketClient>(sp => new DiscordSocketClient(new DiscordSocketConfig
-        {
-            GatewayIntents = GatewayIntents.All
-        }));
+        builder.Services.AddSingleton<DiscordSocketClient>(sp => new DiscordSocketClient(new DiscordSocketConfig { GatewayIntents = GatewayIntents.All }));
         builder.Services.RegisterCommands();
         builder.Services.AddHostedService<DiscordBotService>();
 

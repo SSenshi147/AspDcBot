@@ -9,10 +9,9 @@ namespace DonDumbledore.Logic.Requests;
 
 public class ToplistCommand(IServiceProvider serviceProvider) : IDonCommand
 {
-    public string Name => NAME;
-
     private const string NAME = "toplist";
     private const string DESCRIPTION = "Az intézet bentlakóinak statisztikája";
+    public string Name => NAME;
 
     public SlashCommandProperties CreateProperties()
     {
@@ -31,16 +30,8 @@ public class ToplistCommand(IServiceProvider serviceProvider) : IDonCommand
 
         var result = await botDbContext
             .DrinkModels
-            .GroupBy(x => x.UserId, (userId, models) => new
-            {
-                User = userId,
-                Count = models.Count()
-            })
-            .Join(botDbContext.UserDataModels, arg => arg.User, data => data.UserId, (arg1, data) => new
-            {
-                data.Mention,
-                arg1.Count
-            })
+            .GroupBy(x => x.UserId, (userId, models) => new { User = userId, Count = models.Count() })
+            .Join(botDbContext.UserDataModels, arg => arg.User, data => data.UserId, (arg1, data) => new { data.Mention, arg1.Count })
             .OrderByDescending(x => x.Count)
             .ToListAsync();
 

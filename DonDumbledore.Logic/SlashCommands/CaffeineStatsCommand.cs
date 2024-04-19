@@ -9,10 +9,9 @@ namespace DonDumbledore.Logic.Requests;
 
 public class CaffeineStatsCommand(IServiceProvider serviceProvider) : IDonCommand
 {
-    public string Name => NAME;
-
     private const string NAME = "stats";
     private const string DESCRIPTION = "A személyes drogozási szokásaid";
+    public string Name => NAME;
 
     public SlashCommandProperties CreateProperties()
     {
@@ -35,11 +34,7 @@ public class CaffeineStatsCommand(IServiceProvider serviceProvider) : IDonComman
             .Where(x => x.UserId == arg.User.Id)
             .OrderByDescending(x => x.CreatedAt)
             .Take(3)
-            .Select(x => new
-            {
-                x.CreatedAt,
-                x.Caffeine
-            })
+            .Select(x => new { x.CreatedAt, x.Caffeine })
             .ToListAsync();
 
         var sb = new StringBuilder();
