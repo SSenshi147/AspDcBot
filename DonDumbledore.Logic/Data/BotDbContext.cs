@@ -6,23 +6,11 @@ namespace DonDumbledore.Logic.Data;
 
 public class BotDbContext(DbContextOptions options) : DbContext(options)
 {
-    public DbSet<DrinkModel> DrinkModels
-    {
-        get;
-        set;
-    }
-
-    public DbSet<UserData> UserDataModels
-    {
-        get;
-        set;
-    }
-
-    public DbSet<JobData> JobDataModels
-    {
-        get;
-        set;
-    }
+    public DbSet<DrinkModel> DrinkModels { get; set; }
+    public DbSet<UserData> UserDataModels { get; set; }
+    public DbSet<JobData> JobDataModels { get; set; }
+    public DbSet<TrackedMessage> TrackedMessageModels { get; set; }
+    public DbSet<MessageModel> MessageModels { get; set; }
 }
 
 public class DrinkModel
@@ -65,6 +53,17 @@ public class DrinkModel
     }
 }
 
+public class MessageModel
+{
+    [Key] public Guid Id { get; set; }
+
+    public ulong UserId { get; set; }
+    public ulong MessageId { get; set; }
+    public ulong TextChannelId { get; set; }
+    public string MessageValue { get; set; }
+    public DateTime CreatedAt { get; set; } = DateTime.Now;
+}
+
 public enum CaffeineType
 {
     Coffee,
@@ -73,24 +72,19 @@ public enum CaffeineType
 
 public class UserData
 {
-    [Key]
-    public ulong UserId
-    {
-        get;
-        set;
-    }
+    [Key] public ulong UserId { get; set; }
 
-    public string UserName
-    {
-        get;
-        set;
-    }
+    public string UserName { get; set; }
+    public string Mention { get; set; }
+}
 
-    public string Mention
-    {
-        get;
-        set;
-    }
+public class TrackedMessage
+{
+    [Key] public ulong MessageId { get; set; }
+
+    public ulong UserId { get; set; }
+    public string MessageValue { get; set; }
+    public DateTime CreatedAt { get; set; } = DateTime.Now;
 }
 
 [PrimaryKey(nameof(JobId), nameof(ChannelId))]

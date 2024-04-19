@@ -26,36 +26,58 @@ public class MessageReceivedNotificationHandler(
             return;
         }
 
-        if (!drinks.Contains(arg.CleanContent))
+        using var scope = serviceProvider.CreateAsyncScope();
+        using var botDbContext = scope.ServiceProvider.GetRequiredService<BotDbContext>();
+
+        var message = await botDbContext.TrackedMessageModels.FirstOrDefaultAsync(x => x.MessageValue.Equals(arg.CleanContent));
+
+        if (message == null && !drinks.Contains(arg.CleanContent))
         {
             return;
         }
 
-        using var scope = serviceProvider.CreateAsyncScope();
-        using var botDbContext = scope.ServiceProvider.GetRequiredService<BotDbContext>();
-
-        if (!await botDbContext.UserDataModels.AnyAsync(x => x.UserId == arg.Author.Id, cancellationToken))
+        if (drinks.Contains(arg.CleanContent))
         {
-            var userModel = new UserData { UserId = arg.Author.Id, Mention = arg.Author.Mention, UserName = arg.Author.Username };
+            if (!await botDbContext.UserDataModels.AnyAsync(x => x.UserId == arg.Author.Id, cancellationToken))
+            {
+                var userModel = new UserData { UserId = arg.Author.Id, Mention = arg.Author.Mention, UserName = arg.Author.Username };
 
-            await botDbContext.UserDataModels.AddAsync(userModel, cancellationToken);
+                await botDbContext.UserDataModels.AddAsync(userModel, cancellationToken);
+            }
+
+            var model = new DrinkModel { MessageId = arg.Id, TextChannelId = arg.Channel.Id, UserId = arg.Author.Id };
+
+            if (coffees.Contains(arg.CleanContent))
+            {
+                model.Caffeine = CaffeineType.Coffee;
+            }
+            else if (teas.Contains(arg.CleanContent))
+            {
+                model.Caffeine = CaffeineType.Tea;
+            }
+
+            await botDbContext.AddAsync(model, cancellationToken);
+            await botDbContext.SaveChangesAsync(cancellationToken);
+
+            await arg.AddReactionAsync(OkEmote.Instance);
         }
-
-        var model = new DrinkModel { MessageId = arg.Id, TextChannelId = arg.Channel.Id, UserId = arg.Author.Id };
-
-        if (coffees.Contains(arg.CleanContent))
+        else if (message is not null)
         {
-            model.Caffeine = CaffeineType.Coffee;
-        }
-        else if (teas.Contains(arg.CleanContent))
-        {
-            model.Caffeine = CaffeineType.Tea;
-        }
+            if (!await botDbContext.UserDataModels.AnyAsync(x => x.UserId == arg.Author.Id, cancellationToken))
+            {
+                var userModel = new UserData { UserId = arg.Author.Id, Mention = arg.Author.Mention, UserName = arg.Author.Username };
 
-        await botDbContext.AddAsync(model, cancellationToken);
-        await botDbContext.SaveChangesAsync(cancellationToken);
+                await botDbContext.UserDataModels.AddAsync(userModel, cancellationToken);
+            }
 
-        await arg.AddReactionAsync(OkEmote.Instance);
+            var model = new MessageModel { MessageId = arg.Id, TextChannelId = arg.Channel.Id, UserId = arg.Author.Id, MessageValue = arg.CleanContent };
+
+
+            await botDbContext.AddAsync(model, cancellationToken);
+            await botDbContext.SaveChangesAsync(cancellationToken);
+
+            await arg.AddReactionAsync(OkEmote.Instance);
+        }
     }
 }
 

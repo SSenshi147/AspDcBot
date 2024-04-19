@@ -3,6 +3,7 @@ using System;
 using DonDumbledore.Logic.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -10,9 +11,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace AspDcBot.Migrations
 {
     [DbContext(typeof(BotDbContext))]
-    partial class BotDbContextModelSnapshot : ModelSnapshot
+    [Migration("20240415135430_Tracking")]
+    partial class Tracking
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "8.0.3");
@@ -62,33 +65,6 @@ namespace AspDcBot.Migrations
                     b.ToTable("JobDataModels");
                 });
 
-            modelBuilder.Entity("DonDumbledore.Logic.Data.MessageModel", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("TEXT");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("TEXT");
-
-                    b.Property<ulong>("MessageId")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<string>("MessageValue")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.Property<ulong>("TextChannelId")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<ulong>("UserId")
-                        .HasColumnType("INTEGER");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("MessageModels");
-                });
-
             modelBuilder.Entity("DonDumbledore.Logic.Data.TrackedMessage", b =>
                 {
                     b.Property<ulong>("MessageId")
@@ -101,9 +77,6 @@ namespace AspDcBot.Migrations
                     b.Property<string>("MessageValue")
                         .IsRequired()
                         .HasColumnType("TEXT");
-
-                    b.Property<ulong>("UserId")
-                        .HasColumnType("INTEGER");
 
                     b.HasKey("MessageId");
 
