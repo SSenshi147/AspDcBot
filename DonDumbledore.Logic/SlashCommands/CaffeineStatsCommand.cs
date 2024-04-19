@@ -19,7 +19,7 @@ public class CaffeineStatsCommand(IServiceProvider serviceProvider) : IDonComman
 
         builder.WithName(NAME);
         builder.WithDescription(DESCRIPTION);
-        builder.AddOption(VALUE_OPTION, ApplicationCommandOptionType.String, "üzenet", isRequired: false);
+        builder.AddOption(VALUE_OPTION, ApplicationCommandOptionType.String, "üzenet", false);
         return builder.Build();
     }
 
@@ -37,11 +37,7 @@ public class CaffeineStatsCommand(IServiceProvider serviceProvider) : IDonComman
                 .Where(x => x.UserId == arg.User.Id)
                 .OrderByDescending(x => x.CreatedAt)
                 .Take(3)
-                .Select(x => new
-                {
-                    x.CreatedAt,
-                    x.Caffeine
-                })
+                .Select(x => new { x.CreatedAt, x.Caffeine })
                 .ToListAsync();
 
             var sb = new StringBuilder();
@@ -65,10 +61,7 @@ public class CaffeineStatsCommand(IServiceProvider serviceProvider) : IDonComman
                 .Where(x => x.UserId == arg.User.Id && x.MessageValue.Equals(param))
                 .OrderByDescending(x => x.CreatedAt)
                 .Take(3)
-                .Select(x => new
-                {
-                    x.CreatedAt
-                })
+                .Select(x => new { x.CreatedAt })
                 .ToListAsync();
 
             var sb = new StringBuilder();

@@ -20,7 +20,7 @@ public class ToplistCommand(IServiceProvider serviceProvider) : IDonCommand
         builder.WithName(NAME);
         builder.WithDescription(DESCRIPTION);
 
-        builder.AddOption(VALUE_OPTION, ApplicationCommandOptionType.String, "üzenet", isRequired: false);
+        builder.AddOption(VALUE_OPTION, ApplicationCommandOptionType.String, "üzenet", false);
         return builder.Build();
     }
 
@@ -32,11 +32,11 @@ public class ToplistCommand(IServiceProvider serviceProvider) : IDonCommand
         if (arg.Data.Options.Count() == 0)
         {
             var result = await botDbContext
-            .DrinkModels
-            .GroupBy(x => x.UserId, (userId, models) => new { User = userId, Count = models.Count() })
-            .Join(botDbContext.UserDataModels, arg => arg.User, data => data.UserId, (arg1, data) => new { data.Mention, arg1.Count })
-            .OrderByDescending(x => x.Count)
-            .ToListAsync();
+                .DrinkModels
+                .GroupBy(x => x.UserId, (userId, models) => new { User = userId, Count = models.Count() })
+                .Join(botDbContext.UserDataModels, arg => arg.User, data => data.UserId, (arg1, data) => new { data.Mention, arg1.Count })
+                .OrderByDescending(x => x.Count)
+                .ToListAsync();
 
             var sb = new StringBuilder(result.Count);
             for (var i = 0; i < result.Count; i++)
@@ -51,20 +51,12 @@ public class ToplistCommand(IServiceProvider serviceProvider) : IDonCommand
         {
             var message = (string?)arg.Data.Options.FirstOrDefault().Value;
             var result = await botDbContext
-           .MessageModels
-           .Where(x => x.MessageValue.Equals(message))
-           .GroupBy(x => x.UserId, (userId, models) => new
-           {
-               User = userId,
-               Count = models.Count()
-           })
-           .Join(botDbContext.UserDataModels, arg => arg.User, data => data.UserId, (arg1, data) => new
-           {
-               data.Mention,
-               arg1.Count
-           })
-           .OrderByDescending(x => x.Count)
-           .ToListAsync();
+                .MessageModels
+                .Where(x => x.MessageValue.Equals(message))
+                .GroupBy(x => x.UserId, (userId, models) => new { User = userId, Count = models.Count() })
+                .Join(botDbContext.UserDataModels, arg => arg.User, data => data.UserId, (arg1, data) => new { data.Mention, arg1.Count })
+                .OrderByDescending(x => x.Count)
+                .ToListAsync();
 
             var sb = new StringBuilder(result.Count);
             for (var i = 0; i < result.Count; i++)

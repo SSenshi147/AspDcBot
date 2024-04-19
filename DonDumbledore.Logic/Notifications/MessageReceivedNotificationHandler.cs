@@ -40,22 +40,12 @@ public class MessageReceivedNotificationHandler(
         {
             if (!await botDbContext.UserDataModels.AnyAsync(x => x.UserId == arg.Author.Id, cancellationToken))
             {
-                var userModel = new UserData
-                {
-                    UserId = arg.Author.Id,
-                    Mention = arg.Author.Mention,
-                    UserName = arg.Author.Username
-                };
+                var userModel = new UserData { UserId = arg.Author.Id, Mention = arg.Author.Mention, UserName = arg.Author.Username };
 
                 await botDbContext.UserDataModels.AddAsync(userModel, cancellationToken);
             }
 
-            var model = new DrinkModel
-            {
-                MessageId = arg.Id,
-                TextChannelId = arg.Channel.Id,
-                UserId = arg.Author.Id
-            };
+            var model = new DrinkModel { MessageId = arg.Id, TextChannelId = arg.Channel.Id, UserId = arg.Author.Id };
 
             if (coffees.Contains(arg.CleanContent))
             {
@@ -75,23 +65,12 @@ public class MessageReceivedNotificationHandler(
         {
             if (!await botDbContext.UserDataModels.AnyAsync(x => x.UserId == arg.Author.Id, cancellationToken))
             {
-                var userModel = new UserData
-                {
-                    UserId = arg.Author.Id,
-                    Mention = arg.Author.Mention,
-                    UserName = arg.Author.Username
-                };
+                var userModel = new UserData { UserId = arg.Author.Id, Mention = arg.Author.Mention, UserName = arg.Author.Username };
 
                 await botDbContext.UserDataModels.AddAsync(userModel, cancellationToken);
             }
 
-            var model = new MessageModel
-            {
-                MessageId = arg.Id,
-                TextChannelId = arg.Channel.Id,
-                UserId = arg.Author.Id,
-                MessageValue = arg.CleanContent
-            };
+            var model = new MessageModel { MessageId = arg.Id, TextChannelId = arg.Channel.Id, UserId = arg.Author.Id, MessageValue = arg.CleanContent };
 
 
             await botDbContext.AddAsync(model, cancellationToken);

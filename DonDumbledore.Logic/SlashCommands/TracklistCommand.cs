@@ -1,19 +1,19 @@
-﻿using Discord.WebSocket;
-using Discord;
+﻿using Discord;
+using Discord.WebSocket;
 using DonDumbledore.Logic.Data;
 using DonDumbledore.Logic.Requests;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using System.Text;
-using Microsoft.EntityFrameworkCore;
 
 namespace DonDumbledore.Logic.SlashCommands;
 
 public class TracklistCommand(IServiceProvider serviceProvider) : IDonCommand
 {
-    public string Name => NAME;
-
     private const string NAME = "tracklist";
     private const string DESCRIPTION = "A trekkelt üzeneteket mutatja meg";
+    public string Name => NAME;
+
     public SlashCommandProperties CreateProperties()
     {
         var builder = new SlashCommandBuilder();
