@@ -5,11 +5,10 @@ namespace DonDumbledore.Logic.Requests;
 
 public class PingCommand : IDonCommand
 {
-    public string Name => NAME;
-    
     private const string NAME_OPTION = "name";
     private const string NAME = "ping";
     private const string DESCRIPTION = "ping description";
+    public string Name => NAME;
 
     public SlashCommandProperties CreateProperties()
     {
@@ -17,13 +16,13 @@ public class PingCommand : IDonCommand
 
         builder.WithName(NAME);
         builder.WithDescription(DESCRIPTION);
-        builder.AddOption(NAME_OPTION, ApplicationCommandOptionType.String, "neved", isRequired: false);
+        builder.AddOption(NAME_OPTION, ApplicationCommandOptionType.String, "neved", false);
 
         return builder.Build();
     }
 
     public async Task Handle(SocketSlashCommand arg)
     {
-         await arg.RespondAsync(text: $"pong {arg.Data.Options.FirstOrDefault()?.Value}");
+        await arg.RespondAsync($"pong {arg.Data.Options.FirstOrDefault()?.Value}");
     }
 }

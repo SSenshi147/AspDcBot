@@ -9,8 +9,6 @@ namespace DonDumbledore.Logic.Requests;
 
 public class CaffeineStatsCommand(IServiceProvider serviceProvider) : IDonCommand
 {
-    public string Name => NAME;
-
     private const string NAME = "stats";
     private const string DESCRIPTION = "A személyes drogozási szokásaid vagy a bölcsek anyaga";
     private const string VALUE_OPTION = "üzenet";

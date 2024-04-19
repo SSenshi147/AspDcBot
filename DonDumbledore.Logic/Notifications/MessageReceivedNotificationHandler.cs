@@ -21,7 +21,10 @@ public class MessageReceivedNotificationHandler(
     {
         var arg = notification.SocketMessage;
 
-        if (arg.Author.IsBot) return;
+        if (arg.Author.IsBot)
+        {
+            return;
+        }
 
         using var scope = serviceProvider.CreateAsyncScope();
         using var botDbContext = scope.ServiceProvider.GetRequiredService<BotDbContext>();

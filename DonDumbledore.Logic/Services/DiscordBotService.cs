@@ -7,7 +7,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using System;
 
 namespace DonDumbledore.Logic.Services;
 
@@ -26,7 +25,7 @@ public class DiscordBotService(
         var token = _config.BotToken;
         if (token is null)
         {
-            logger.LogWarning($"bot token not found, bot will not launch");
+            logger.LogWarning("bot token not found, bot will not launch");
             return;
         }
 
@@ -45,6 +44,17 @@ public class DiscordBotService(
         logger.LogInformation("bot successfully logged in");
         await client.StartAsync();
         logger.LogInformation("bot successfully started");
+    }
+
+    public async Task StopAsync(CancellationToken cancellationToken)
+    {
+        if (client.ConnectionState != ConnectionState.Connected)
+        {
+            logger.LogWarning($"bot client is not in {nameof(ConnectionState.Connected)}, bot will not stop");
+            return;
+        }
+
+        await ForceStopAsync();
     }
 
     private Task Client_Log(LogMessage arg)
@@ -80,21 +90,7 @@ public class DiscordBotService(
     private async Task Client_MessageReceived(SocketMessage arg)
     {
         logger.LogInformation("bot received a message");
-        await mediator.Publish(new MessageReceivedNotification
-        {
-            SocketMessage = arg
-        });
-    }
-
-    public async Task StopAsync(CancellationToken cancellationToken)
-    {
-        if (client.ConnectionState != ConnectionState.Connected)
-        {
-            logger.LogWarning($"bot client is not in {nameof(ConnectionState.Connected)}, bot will not stop");
-            return;
-        }
-
-        await ForceStopAsync();
+        await mediator.Publish(new MessageReceivedNotification { SocketMessage = arg });
     }
 
     public async Task ForceStopAsync()

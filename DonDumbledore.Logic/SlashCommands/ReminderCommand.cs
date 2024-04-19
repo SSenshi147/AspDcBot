@@ -15,8 +15,6 @@ public class ReminderCommand(
     ILogger<ReminderCommand> logger,
     IServiceProvider serviceProvider) : IDonCommand
 {
-    public string Name => NAME;
-
     private const string NAME = "reminder";
     private const string DESCRIPTION = "deals with reminders";
     private const string OPTION_ADD = "add";
@@ -31,6 +29,7 @@ public class ReminderCommand(
     private const string OPTION_ONETIME = "onetime";
     private const string OPTION_ONETIME_DATETIME = "datetime";
     private const string OPTION_ONETIME_MESSAGE = "message";
+    public string Name => NAME;
 
     public SlashCommandProperties CreateProperties()
     {
@@ -83,8 +82,8 @@ public class ReminderCommand(
                 .WithName(OPTION_ONETIME)
                 .WithDescription("adds a one-time reminder")
                 .WithType(ApplicationCommandOptionType.SubCommand)
-                .AddOption(OPTION_ONETIME_DATETIME, ApplicationCommandOptionType.String, "the ISO datetime of the reminer", isRequired: true)
-                .AddOption(OPTION_ONETIME_MESSAGE, ApplicationCommandOptionType.String, "the message to send", isRequired: true));
+                .AddOption(OPTION_ONETIME_DATETIME, ApplicationCommandOptionType.String, "the ISO datetime of the reminer", true)
+                .AddOption(OPTION_ONETIME_MESSAGE, ApplicationCommandOptionType.String, "the message to send", true));
 
         return builer.Build();
     }
@@ -93,7 +92,7 @@ public class ReminderCommand(
     {
         try
         {
-            await arg.RespondAsync(text: "received");
+            await arg.RespondAsync("received");
             var subcommand = arg.Data.Options.SingleOrDefault();
 
             switch (subcommand.Name)
@@ -110,7 +109,6 @@ public class ReminderCommand(
                 case OPTION_ONETIME:
                     await HandleOneTime(subcommand, arg);
                     break;
-                default: break;
             }
         }
         catch (Exception ex)
@@ -126,14 +124,14 @@ public class ReminderCommand(
 
         if (!DateTime.TryParse(timing, out var dateTime))
         {
-            await arg.FollowupAsync(text: "invalid timing, provide valid ISO format");
+            await arg.FollowupAsync("invalid timing, provide valid ISO format");
             return;
         }
 
         try
         {
             BackgroundJob.Schedule(() => OneTimeReminder(arg.Channel.Id, message), dateTime);
-            await arg.FollowupAsync(text: $"added for {dateTime.ToString("yyyy.MM.dd HH:mm:ss")}");
+            await arg.FollowupAsync($"added for {dateTime.ToString("yyyy.MM.dd HH:mm:ss")}");
         }
         catch (Exception ex)
         {
@@ -150,7 +148,7 @@ public class ReminderCommand(
             return;
         }
 
-        await messageChannel.SendMessageAsync(text: message);
+        await messageChannel.SendMessageAsync(message);
     }
 
     private async Task HandleAdd(SocketSlashCommandDataOption option, SocketSlashCommand arg)
@@ -169,35 +167,27 @@ public class ReminderCommand(
 
             if (await botDbContext.JobDataModels.AnyAsync(x => x.JobId == jobName && x.ChannelId == arg.Channel.Id))
             {
-                await arg.FollowupAsync(text: "job already exists");
+                await arg.FollowupAsync("job already exists");
                 return;
             }
 
             if (!CronExpression.TryParse(timing, out _))
             {
-                await arg.FollowupAsync(text: $"invalid cron: {nameof(timing)}");
+                await arg.FollowupAsync($"invalid cron: {nameof(timing)}");
                 return;
             }
 
             if (reminderTiming?.Length > 0 && !CronExpression.TryParse(reminderTiming, out _))
             {
-                await arg.FollowupAsync(text: $"invalid cron: {nameof(reminderTiming)}");
+                await arg.FollowupAsync($"invalid cron: {nameof(reminderTiming)}");
                 return;
             }
 
-            var newJob = (await botDbContext.JobDataModels.AddAsync(new JobData
-            {
-                JobId = jobName,
-                ChannelId = channelId,
-                Message = message,
-            })).Entity;
+            var newJob = (await botDbContext.JobDataModels.AddAsync(new JobData { JobId = jobName, ChannelId = channelId, Message = message })).Entity;
             await botDbContext.SaveChangesAsync();
-            RecurringJob.AddOrUpdate(newJob.HangfireJobId, () => PingTask(newJob, reminderTiming), timing, new RecurringJobOptions
-            {
-                TimeZone = TimeZoneInfo.Local
-            });
+            RecurringJob.AddOrUpdate(newJob.HangfireJobId, () => PingTask(newJob, reminderTiming), timing, new RecurringJobOptions { TimeZone = TimeZoneInfo.Local });
 
-            await arg.FollowupAsync(text: "job added");
+            await arg.FollowupAsync("job added");
         }
         catch (Exception ex)
         {
@@ -221,7 +211,7 @@ public class ReminderCommand(
                 return;
             }
 
-            var message = await messageChannel.SendMessageAsync(text: $"[{jobData.JobId}]: {jobData.Message ?? jobData.JobId}");
+            var message = await messageChannel.SendMessageAsync($"[{jobData.JobId}]: {jobData.Message ?? jobData.JobId}");
 
             if (recurringCron?.Length > 0 && job.ReminderJobId is null)
             {
@@ -229,10 +219,7 @@ public class ReminderCommand(
 
                 try
                 {
-                    RecurringJob.AddOrUpdate(job.HangfireReminderJobId, () => PingTaskReminder(job.HangfireJobId), recurringCron, new RecurringJobOptions
-                    {
-                        TimeZone = TimeZoneInfo.Local
-                    });
+                    RecurringJob.AddOrUpdate(job.HangfireReminderJobId, () => PingTaskReminder(job.HangfireJobId), recurringCron, new RecurringJobOptions { TimeZone = TimeZoneInfo.Local });
                     botDbContext.JobDataModels.Update(job);
                     await botDbContext.SaveChangesAsync();
                 }
@@ -273,7 +260,7 @@ public class ReminderCommand(
 
             if (toRemove is null || toRemove == default)
             {
-                await arg.FollowupAsync(text: "job doesnt exist");
+                await arg.FollowupAsync("job doesnt exist");
                 return;
             }
 
@@ -282,7 +269,7 @@ public class ReminderCommand(
             botDbContext.JobDataModels.Remove(toRemove);
             await botDbContext.SaveChangesAsync();
 
-            await arg.FollowupAsync(text: "job removed");
+            await arg.FollowupAsync("job removed");
         }
         catch (Exception ex)
         {
@@ -303,7 +290,7 @@ public class ReminderCommand(
 
             if (toRemove is null || toRemove == default)
             {
-                await arg.FollowupAsync(text: "job doesnt exist");
+                await arg.FollowupAsync("job doesnt exist");
                 return;
             }
 
@@ -312,7 +299,7 @@ public class ReminderCommand(
             botDbContext.JobDataModels.Update(toRemove);
             await botDbContext.SaveChangesAsync();
 
-            await arg.FollowupAsync(text: "acknowledged");
+            await arg.FollowupAsync("acknowledged");
         }
         catch (Exception ex)
         {
