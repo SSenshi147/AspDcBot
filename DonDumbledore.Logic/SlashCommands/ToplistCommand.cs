@@ -13,6 +13,8 @@ public class ToplistCommand(IServiceProvider serviceProvider) : IDonCommand
     private const string DESCRIPTION = "Az intézet bentlakóinak statisztikája";
     private const string VALUE_OPTION = "üzenet";
 
+    public string Name => NAME;
+
     public SlashCommandProperties CreateProperties()
     {
         var builder = new SlashCommandBuilder();

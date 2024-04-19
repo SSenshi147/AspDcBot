@@ -13,6 +13,8 @@ public class CaffeineStatsCommand(IServiceProvider serviceProvider) : IDonComman
     private const string DESCRIPTION = "A személyes drogozási szokásaid vagy a bölcsek anyaga";
     private const string VALUE_OPTION = "üzenet";
 
+    public string Name => NAME;
+
     public SlashCommandProperties CreateProperties()
     {
         var builder = new SlashCommandBuilder();
