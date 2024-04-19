@@ -7,6 +7,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using System;
 
 namespace DonDumbledore.Logic.Services;
 
@@ -111,7 +112,7 @@ public class DiscordBotService(
 
     private async Task Client_Connected()
     {
-         await RegisterCommandsAsync();
+        await RegisterCommandsAsync();
     }
 
     private async Task RegisterCommandsAsync()
@@ -121,7 +122,7 @@ public class DiscordBotService(
         if (_config.IsProductionEnvironment)
         {
             await ClearGuildCommandsAsync();
-            
+
             if (_config.RegisterNewCommands)
             {
                 await ClearGlobalCommandsAsync();
@@ -131,10 +132,28 @@ public class DiscordBotService(
         else
         {
             await ClearGlobalCommandsAsync();
-            await ClearGuildCommandsAsync();
-            await RegisterGuildCommandsAsync();
+            await BulkOverwriteGuildCommandsAsync();
         }
 
+
+        async Task BulkOverwriteGuildCommandsAsync()
+        {
+            var services = serviceProvider.GetServices<IDonCommand>().ToList();
+            var guilds = client.Guilds;
+            await Parallel.ForEachAsync(guilds, async (guild, _) =>
+            {
+                var commandProperties = services.Select(x => x.CreateProperties()).ToArray();
+                try
+                {
+                    await guild.BulkOverwriteApplicationCommandAsync(commandProperties);
+                    logger.LogInformation("registered guild commands");
+                }
+                catch (Exception ex)
+                {
+                    logger.LogError(ex, "error while bulk registering guild commands");
+                }
+            });
+        }
 
         async Task ClearGlobalCommandsAsync()
         {
@@ -180,10 +199,10 @@ public class DiscordBotService(
         async Task RegisterGuildCommandsAsync()
         {
             var guilds = client.Guilds;
+            var services = serviceProvider.GetServices<IDonCommand>();
 
             await Parallel.ForEachAsync(guilds, async (guild, _) =>
             {
-                var services = serviceProvider.GetServices<IDonCommand>();
                 foreach (var service in services)
                 {
                     try
