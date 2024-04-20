@@ -5,7 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using System.Text;
 
-namespace DonDumbledore.Logic.Requests;
+namespace DonDumbledore.Logic.SlashCommands;
 
 public class CaffeineStatsCommand(IServiceProvider serviceProvider) : IDonCommand
 {
@@ -29,9 +29,9 @@ public class CaffeineStatsCommand(IServiceProvider serviceProvider) : IDonComman
     {
         await using var scope = serviceProvider.CreateAsyncScope();
         await using var botDbContext = scope.ServiceProvider.GetRequiredService<BotDbContext>();
+        var param = (string?)arg.Data.Options.FirstOrDefault()?.Value;
 
-
-        if (arg.Data.Options.Count() == 0)
+        if (string.IsNullOrEmpty(param))
         {
             var count = await botDbContext.DrinkModels.CountAsync(x => x.UserId == arg.User.Id);
             var latests = await botDbContext
@@ -56,7 +56,6 @@ public class CaffeineStatsCommand(IServiceProvider serviceProvider) : IDonComman
         }
         else
         {
-            var param = (string?)arg.Data.Options.FirstOrDefault().Value;
             var count = await botDbContext.MessageModels.CountAsync(x => x.UserId == arg.User.Id && x.MessageValue.Equals(param));
             var latests = await botDbContext
                 .MessageModels

@@ -1,7 +1,7 @@
 ﻿using Discord;
 using Discord.WebSocket;
 
-namespace DonDumbledore.Logic.Requests;
+namespace DonDumbledore.Logic.SlashCommands;
 
 public interface IDonCommand
 {

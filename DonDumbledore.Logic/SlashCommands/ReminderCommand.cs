@@ -2,7 +2,6 @@
 using Discord;
 using Discord.WebSocket;
 using DonDumbledore.Logic.Data;
-using DonDumbledore.Logic.Requests;
 using Hangfire;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;

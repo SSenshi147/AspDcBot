@@ -1,7 +1,6 @@
 ﻿using Discord;
 using Discord.WebSocket;
 using DonDumbledore.Logic.Data;
-using DonDumbledore.Logic.Requests;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -26,13 +25,17 @@ public class TrackCommand(IServiceProvider serviceProvider) : IDonCommand
 
     public async Task Handle(SocketSlashCommand arg)
     {
-        using var scope = serviceProvider.CreateAsyncScope();
-        using var botDbContext = scope.ServiceProvider.GetRequiredService<BotDbContext>();
+        var trackMessage = (string?)arg.Data.Options.FirstOrDefault()?.Value;
+        if (string.IsNullOrEmpty(trackMessage))
+        {
+            await arg.RespondAsync("invalid input");
+            return;
+        }
 
-        var trackMessage = (string?)arg.Data.Options.FirstOrDefault().Value;
+        await using var scope = serviceProvider.CreateAsyncScope();
+        await using var botDbContext = scope.ServiceProvider.GetRequiredService<BotDbContext>();
 
         var model = await botDbContext.TrackedMessageModels.FirstOrDefaultAsync(x => x.MessageValue.Equals(trackMessage));
-
         if (model is not null)
         {
             await arg.RespondAsync("Golyót akarsz? Ezt már figyelem.");

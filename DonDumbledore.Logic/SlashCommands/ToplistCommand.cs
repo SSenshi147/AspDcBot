@@ -5,7 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using System.Text;
 
-namespace DonDumbledore.Logic.Requests;
+namespace DonDumbledore.Logic.SlashCommands;
 
 public class ToplistCommand(IServiceProvider serviceProvider) : IDonCommand
 {
@@ -28,10 +28,11 @@ public class ToplistCommand(IServiceProvider serviceProvider) : IDonCommand
 
     public async Task Handle(SocketSlashCommand arg)
     {
-        using var scope = serviceProvider.CreateAsyncScope();
-        using var botDbContext = scope.ServiceProvider.GetRequiredService<BotDbContext>();
+        await using var scope = serviceProvider.CreateAsyncScope();
+        await using var botDbContext = scope.ServiceProvider.GetRequiredService<BotDbContext>();
+        var message = (string?)arg.Data.Options.FirstOrDefault()?.Value;
 
-        if (arg.Data.Options.Count() == 0)
+        if (string.IsNullOrEmpty(message))
         {
             var result = await botDbContext
                 .DrinkModels
@@ -39,6 +40,12 @@ public class ToplistCommand(IServiceProvider serviceProvider) : IDonCommand
                 .Join(botDbContext.UserDataModels, arg => arg.User, data => data.UserId, (arg1, data) => new { data.Mention, arg1.Count })
                 .OrderByDescending(x => x.Count)
                 .ToListAsync();
+
+            if (result.Count == 0)
+            {
+                await arg.RespondAsync("hát te még nem is drogoztál!");
+                return;
+            }
 
             var sb = new StringBuilder(result.Count);
             for (var i = 0; i < result.Count; i++)
@@ -51,7 +58,6 @@ public class ToplistCommand(IServiceProvider serviceProvider) : IDonCommand
         }
         else
         {
-            var message = (string?)arg.Data.Options.FirstOrDefault().Value;
             var result = await botDbContext
                 .MessageModels
                 .Where(x => x.MessageValue.Equals(message))
@@ -59,6 +65,12 @@ public class ToplistCommand(IServiceProvider serviceProvider) : IDonCommand
                 .Join(botDbContext.UserDataModels, arg => arg.User, data => data.UserId, (arg1, data) => new { data.Mention, arg1.Count })
                 .OrderByDescending(x => x.Count)
                 .ToListAsync();
+
+            if (result.Count == 0)
+            {
+                await arg.RespondAsync($"hát te még nem is szóltál be hogy {message}!");
+                return;
+            }
 
             var sb = new StringBuilder(result.Count);
             for (var i = 0; i < result.Count; i++)

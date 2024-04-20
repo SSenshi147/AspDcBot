@@ -1,4 +1,4 @@
-﻿using DonDumbledore.Logic.Requests;
+﻿using DonDumbledore.Logic.SlashCommands;
 using Microsoft.Extensions.DependencyInjection;
 using System.Reflection;
 

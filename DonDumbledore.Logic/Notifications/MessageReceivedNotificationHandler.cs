@@ -26,12 +26,14 @@ public class MessageReceivedNotificationHandler(
             return;
         }
 
-        using var scope = serviceProvider.CreateAsyncScope();
-        using var botDbContext = scope.ServiceProvider.GetRequiredService<BotDbContext>();
+        await using var scope = serviceProvider.CreateAsyncScope();
+        await using var botDbContext = scope.ServiceProvider.GetRequiredService<BotDbContext>();
 
-        var message = await botDbContext.TrackedMessageModels.FirstOrDefaultAsync(x => x.MessageValue.Equals(arg.CleanContent));
+        var message = await botDbContext
+            .TrackedMessageModels
+            .FirstOrDefaultAsync(x => x.MessageValue == arg.CleanContent || x.MessageValue == arg.Content, cancellationToken);
 
-        if (message == null && !drinks.Contains(arg.CleanContent))
+        if (message is null && !drinks.Contains(arg.CleanContent))
         {
             return;
         }
@@ -70,8 +72,7 @@ public class MessageReceivedNotificationHandler(
                 await botDbContext.UserDataModels.AddAsync(userModel, cancellationToken);
             }
 
-            var model = new MessageModel { MessageId = arg.Id, TextChannelId = arg.Channel.Id, UserId = arg.Author.Id, MessageValue = arg.CleanContent };
-
+            var model = new MessageModel { MessageId = arg.Id, TextChannelId = arg.Channel.Id, UserId = arg.Author.Id, MessageValue = arg.Content };
 
             await botDbContext.AddAsync(model, cancellationToken);
             await botDbContext.SaveChangesAsync(cancellationToken);

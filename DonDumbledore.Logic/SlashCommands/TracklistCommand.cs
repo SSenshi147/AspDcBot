@@ -1,7 +1,6 @@
 ﻿using Discord;
 using Discord.WebSocket;
 using DonDumbledore.Logic.Data;
-using DonDumbledore.Logic.Requests;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using System.Text;
@@ -25,9 +24,8 @@ public class TracklistCommand(IServiceProvider serviceProvider) : IDonCommand
 
     public async Task Handle(SocketSlashCommand arg)
     {
-        using var scope = serviceProvider.CreateAsyncScope();
-        using var botDbContext = scope.ServiceProvider.GetRequiredService<BotDbContext>();
-
+        await using var scope = serviceProvider.CreateAsyncScope();
+        await using var botDbContext = scope.ServiceProvider.GetRequiredService<BotDbContext>();
 
         var result = await botDbContext.TrackedMessageModels.ToListAsync();
 

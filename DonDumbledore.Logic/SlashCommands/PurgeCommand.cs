@@ -1,7 +1,6 @@
 ﻿using Discord;
 using Discord.WebSocket;
 using DonDumbledore.Logic.Data;
-using DonDumbledore.Logic.Requests;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -26,13 +25,17 @@ public class PurgeCommand(IServiceProvider serviceProvider) : IDonCommand
 
     public async Task Handle(SocketSlashCommand arg)
     {
-        using var scope = serviceProvider.CreateAsyncScope();
-        using var botDbContext = scope.ServiceProvider.GetRequiredService<BotDbContext>();
-
-        var purgeMessage = (string?)arg.Data.Options.FirstOrDefault().Value;
+        var purgeMessage = (string?)arg.Data.Options.FirstOrDefault()?.Value;
+        if (string.IsNullOrEmpty(purgeMessage))
+        {
+            await arg.RespondAsync("Mit akarsz kitörölni rózsabogaram?");
+            return;
+        }
+        
+        await using var scope = serviceProvider.CreateAsyncScope();
+        await using var botDbContext = scope.ServiceProvider.GetRequiredService<BotDbContext>();
 
         var model = await botDbContext.MessageModels.Where(x => x.MessageValue.Equals(purgeMessage)).ToListAsync();
-
         if (model.Count == 0)
         {
             await arg.RespondAsync("Mit akarsz kitörölni rózsabogaram?");

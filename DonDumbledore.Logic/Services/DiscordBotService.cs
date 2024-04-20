@@ -1,7 +1,7 @@
 ﻿using Discord;
 using Discord.WebSocket;
 using DonDumbledore.Logic.Notifications;
-using DonDumbledore.Logic.Requests;
+using DonDumbledore.Logic.SlashCommands;
 using MediatR;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
