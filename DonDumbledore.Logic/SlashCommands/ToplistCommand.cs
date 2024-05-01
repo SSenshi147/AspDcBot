@@ -37,7 +37,7 @@ public class ToplistCommand(IServiceProvider serviceProvider) : IDonCommand
             var result = await botDbContext
                 .DrinkModels
                 .GroupBy(x => x.UserId, (userId, models) => new { User = userId, Count = models.Count() })
-                .Join(botDbContext.UserDataModels, arg => arg.User, data => data.UserId, (arg1, data) => new { data.Mention, arg1.Count })
+                .Join(botDbContext.UserDataModels, arg => arg.User, data => data.UserId, (arg1, data) => new { arg1.Count, data.UserName })
                 .OrderByDescending(x => x.Count)
                 .ToListAsync();
 
@@ -51,7 +51,7 @@ public class ToplistCommand(IServiceProvider serviceProvider) : IDonCommand
             for (var i = 0; i < result.Count; i++)
             {
                 var item = result[i];
-                sb.AppendLine($"{i + 1}. {item.Mention} - {item.Count} drogozási alkalom");
+                sb.AppendLine($"{i + 1}. {item.UserName} - {item.Count} drogozási alkalom");
             }
 
             await arg.RespondAsync(sb.ToString());
@@ -62,7 +62,7 @@ public class ToplistCommand(IServiceProvider serviceProvider) : IDonCommand
                 .MessageModels
                 .Where(x => x.MessageValue.Equals(message))
                 .GroupBy(x => x.UserId, (userId, models) => new { User = userId, Count = models.Count() })
-                .Join(botDbContext.UserDataModels, arg => arg.User, data => data.UserId, (arg1, data) => new { data.Mention, arg1.Count })
+                .Join(botDbContext.UserDataModels, arg => arg.User, data => data.UserId, (arg1, data) => new { data.UserName, arg1.Count })
                 .OrderByDescending(x => x.Count)
                 .ToListAsync();
 
@@ -76,7 +76,7 @@ public class ToplistCommand(IServiceProvider serviceProvider) : IDonCommand
             for (var i = 0; i < result.Count; i++)
             {
                 var item = result[i];
-                sb.AppendLine($"{i + 1}. {item.Mention} - {item.Count} beszólási alkalom evvel: {message}");
+                sb.AppendLine($"{i + 1}. {item.UserName} - {item.Count} beszólási alkalom evvel: {message}");
             }
 
             await arg.RespondAsync(sb.ToString());
